@@ -1,0 +1,73 @@
+plan,programme,category,course_code,course_name,credit_hours,prerequisite,offering_dept
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,UNGS 1301,Basic Philosophy and Islamic Worldview,3,,IRKHS
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,UNGS 2290,Knowledge & Civilization in Islam,2,,IRKHS
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,UNGS 2380,Ethics and Fiqh of Contemporary Issues,3,,IRKHS
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,TQTD 1002,Tilawah Al-Quran 1,0.5,,CELPAD
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,TQTD 2002,Tilawah Al-Quran 2,0.5,TQTD 1002,CELPAD
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,LQAD 1003,Arabic for Ibadah 1,0.5,,CELPAD
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,LQAD 2003,Arabic for Ibadah 2,0.5,LQAD 1003,CELPAD
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,CCUB 1061,Usrah 1,0.5,,STADD
+201,BCS,University Required Courses: Islamic Fundamental Knowledge,CCUB 1062,Usrah 2,0.5,CCUB 1061,STADD
+201,BCS,University Required Courses: Leadership and Skills,LEED 1301,English for Academic Writing,3,,CELPAD
+201,BCS,University Required Courses: Leadership and Skills,CCFM 2061,Family Management,0.5,,STADD
+201,BCS,University Required Courses: Leadership and Skills,CCLM 2051,Leadership,0.5,,STADD
+201,BCS,University Required Courses: Leadership and Skills,CCSS 1020/CCSS 2010/CCSS 3010,Skills 1,0.5,,STADD
+201,BCS,University Required Courses: Leadership and Skills,CCSS 1020/CCSS 2010/CCSS 3010,Skills 2,0.5,,STADD
+201,BCS,University Required Courses: Leadership and Skills,LMBD 1131,Bahasa Melayu I (International Only),1,,CELPAD
+201,BCS,University Required Courses: Leadership and Skills,LMBD 1132,Bahasa Melayu II (International Only),1,LMBD 1131,CELPAD
+201,BCS,University Required Courses: Sustainable Development,UNGS 1201,"Sustainable Development Issues, Principles and Practices",2,,IRKHS
+201,BCS,University Required Courses: Sustainable Development,CCUB 2163,Usrah in Action 1 (SD: Community Profiling),1,UNGS 1201,TBD
+201,BCS,University Required Courses: Sustainable Development,CCUB 3164,Usrah in Action 2,1,CCUB 2163,TBD
+201,BCS,Kulliyyah Required Courses,INFO 1302,Business Fundamentals,3,,
+201,BCS,Kulliyyah Required Courses,CSCI 1300,Elements of Programming,3,,
+201,BCS,Kulliyyah Required Courses,INFO 1303,Database Systems,3,,
+201,BCS,Kulliyyah Required Courses,CSCI 1301,Object-Oriented Programming,3,CSCI 1300,
+201,BCS,Kulliyyah Required Courses,CSCI 1302,Introduction to Computer Organization,3,CSCI 1303,
+201,BCS,Kulliyyah Required Courses,CSCI 1303,Mathematics for Computing I,3,,
+201,BCS,Kulliyyah Required Courses,INFO 2304,System Analysis & Design,3,CSCI 1300,
+201,BCS,Kulliyyah Required Courses,INFO 4304,ICT & Islam,3,4th year student,
+201,BCS,Kulliyyah Required Courses,CSCI 1304,Probability and Statistics,3,,
+201,BCS,Kulliyyah Required Courses,CSCI 1305,Introduction to Software Engineering,3,,
+201,BCS,Kulliyyah Required Courses,INFO 4303,Technopreneurship,3,4th year student,
+201,BCS,Kulliyyah Required Courses,CSCI 3300,Operating Systems,3,CSCI 1302,
+201,BCS,Kulliyyah Required Courses,INFO 3307,Human Computer Interaction,3,INFO 2304,
+201,BCS,Kulliyyah Required Courses,LM 2026,Bahasa Melayu Kerjaya (Malaysian Only),2,,
+201,BCS,Department Required Courses for BCS,INFO 2302,Web Technologies,3,,
+201,BCS,Department Required Courses for BCS,CSCI 2300,Data Structures and Algorithms I,3,CSCI 1301,
+201,BCS,Department Required Courses for BCS,CSCI 2301,Computer Networking,3,CSCI 1303,
+201,BCS,Department Required Courses for BCS,CSCI 2302,Digital Systems Fundamentals,3,CSCI 1302,
+201,BCS,Department Required Courses for BCS,CSCI 2303,Principles of IT Security,3,CSCI 2301,
+201,BCS,Department Required Courses for BCS,CSCI 2304,Intelligent Systems,3,CSCI 2305,
+201,BCS,Department Required Courses for BCS,CSCI 2305,Mathematics for Computing II,3,CSCI 1303,
+201,BCS,Department Required Courses for BCS,CSCI 3301,Computer Architecture and Assembly Language,3,CSCI 2302,
+201,BCS,Department Required Courses for BCS,CSCI 3302,Data Structures and Algorithms II,3,CSCI 2300,
+201,BCS,Department Required Courses for BCS,CSCI 3303,Mathematics for Computing III,3,CSCI 2305,
+201,BCS,Department Required Courses for BCS,CSCI 4300,Computation and Complexity,3,CSCI 3302,
+201,BCS,Department Required Courses for BCS,CSCI 4401,Final Year Project I,4,Earned credit hours >=90,
+201,BCS,Department Required Courses for BCS,CSCI 4402,Final Year Project II,4,CSCI 4401,
+201,BCS,Department Required Courses for BCS,CSCI 4901,Industrial Attachment,9,Passed all courses,
+201,BCS,Specialization: Software Engineering,CSCI 4320,Software Testing,3,CSCI 1305,
+201,BCS,Specialization: Software Engineering,CSCI 4321,Project Management in Software Engineering,3,"CSCI 1305, INFO 2304",
+201,BCS,Specialization: Software Engineering,CSCI 4322,Software Design and Architecture,3,"CSCI 1305, INFO 2304",
+201,BCS,Specialization: Software Engineering,CSCI 4323,Requirements Engineering,3,CSCI 1501,
+201,BCS,Specialization: Software Engineering,CSCI 4324,Database Application Development,3,"CSCI 1305, INFO 1303",
+201,BCS,Specialization: Software Engineering,CSCI 4325,Software Quality Assurance,3,CSCI 1305,
+201,BCS,Specialization: Software Engineering,CSCI 4326,Empirical Methods in Software Engineering,3,CSCI 1305,
+201,BCS,Specialization: Data Science and Computational Intelligence,CSCI 4340,Machine Learning,3,CSCI 2303,
+201,BCS,Specialization: Data Science and Computational Intelligence,CSCI 4341,Big Data Analytics,3,CSCI 2303,
+201,BCS,Specialization: Data Science and Computational Intelligence,CSCI 4342,Natural Language Processing,3,CSCI 2303,
+201,BCS,Specialization: Data Science and Computational Intelligence,CSCI 4343,Data Science,3,CSCI 2303,
+201,BCS,Specialization: Data Science and Computational Intelligence,CSCI 4344,Introduction to Affective Computing,3,CSCI 2303,
+201,BCS,Specialization: Data Science and Computational Intelligence,CSCI 4345,Computational Modelling and Simulation,3,CSCI 3303,
+201,BCS,Specialization: Data Science and Computational Intelligence,CSCI 4346,Bio-inspired Computing,3,CSCI 3304,
+201,BCS,Specialization: Data Science and Computational Intelligence,CSCI 4347,Brain Computational Analytics,3,CSCI 2304,
+201,BCS,Specialization: Network and Security,CSCI 4330,Networking Concepts and Practices,3,"CSCI 1303, CSCI 2301",
+201,BCS,Specialization: Network and Security,CSCI 4331,Enterprise Network,3,"CSCI 1303, CSCI 2301",
+201,BCS,Specialization: Network and Security,CSCI 4332,Digital Evidence Forensics,3,"CSCI 2303, CSCI 3300, CSCI 3301",
+201,BCS,Specialization: Network and Security,CSCI 4333,Cryptography,3,CSCI 2305,
+201,BCS,Specialization: Network and Security,CSCI 4334,Network and Systems Administration,3,CSCI 2301,
+201,BCS,Specialization: Network and Security,CSCI 4335,Security in Programming,3,"CSCI 2303, CSCI 3300",
+201,BCS,Specialization: Network and Security,CSCI 4336,Network Security,3,"CSCI 2303, CSCI 4334",
+201,BCS,Specialization: Free or No Specialization,CSCI 4310,Introduction to Quantum Computing,3,CSCI 3303,
+201,BCS,Specialization: Free or No Specialization,CSCI 4311,Mobile Application Development,3,,
+201,BCS,Specialization: Free or No Specialization,CSCI 4312,Blockchain and Application,3,,

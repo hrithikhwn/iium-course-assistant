@@ -1,0 +1,87 @@
+plan,programme,category,course_code,course_name,credit_hours,prerequisite,offering_dept
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,UNGS 1301,Basic Philosophy and Islamic Worldview,3,,IRKHS
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,UNGS 2290,Knowledge & Civilization in Islam,2,,IRKHS
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,UNGS 2380,Ethics and Fiqh of Contemporary Issues,3,,IRKHS
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,TQTD 1002,Tilawah Al-Quran 1,0.5,,CELPAD
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,TQTD 2002,Tilawah Al-Quran 2,0.5,TQTD 1002,CELPAD
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,LQAD 1003,Arabic for Ibadah 1,0.5,,CELPAD
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,LQAD 2003,Arabic for Ibadah 2,0.5,LQAD 1003,CELPAD
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,CCUB 1061,Usrah 1,0.5,,STADD
+201,BIT,University Required Courses: Islamic Fundamental Knowledge,CCUB 1062,Usrah 2,0.5,CCUB 1061,STADD
+201,BIT,University Required Courses: Leadership and Skills,LEED 1301,English for Academic Writing,3,,CELPAD
+201,BIT,University Required Courses: Leadership and Skills,CCFM 2061,Family Management,0.5,,STADD
+201,BIT,University Required Courses: Leadership and Skills,CCLM 2051,Leadership,0.5,,STADD
+201,BIT,University Required Courses: Leadership and Skills,CCSS 1020/CCSS 2010/CCSS 3010,Skills 1,0.5,,STADD
+201,BIT,University Required Courses: Leadership and Skills,CCSS 1020/CCSS 2010/CCSS 3010,Skills 2,0.5,,STADD
+201,BIT,University Required Courses: Leadership and Skills,LMBD 1131,Bahasa Melayu I (International Only),1,,CELPAD
+201,BIT,University Required Courses: Leadership and Skills,LMBD 1132,Bahasa Melayu II (International Only),1,LMBD 1131,CELPAD
+201,BIT,University Required Courses: Sustainable Development,SCSH 1201,"Sustainable Development Issues, Principles and Practices",2,,SC4SH
+201,BIT,University Required Courses: Sustainable Development,SCSH 2163,Usrah in Action 1 (SD: Community Profiling),1,SCSH 1201,SC4SH
+201,BIT,University Required Courses: Sustainable Development,SCSH 3164,Usrah in Action 2,1,SCSH 2163,SC4SH
+201,BIT,Kulliyyah Required Courses,INFO 1302,Business Fundamentals,3,,
+201,BIT,Kulliyyah Required Courses,CSCI 1300,Elements of Programming,3,,
+201,BIT,Kulliyyah Required Courses,INFO 1303,Database Systems,3,,
+201,BIT,Kulliyyah Required Courses,CSCI 1301,Object-Oriented Programming,3,CSCI 1300,
+201,BIT,Kulliyyah Required Courses,CSCI 1302,Introduction to Computer Organization,3,CSCI 1303,
+201,BIT,Kulliyyah Required Courses,CSCI 1303,Mathematics for Computing I,3,,
+201,BIT,Kulliyyah Required Courses,INFO 2304,System Analysis & Design,3,CSCI 1300,
+201,BIT,Kulliyyah Required Courses,INFO 4304,ICT & Islam,3,,
+201,BIT,Kulliyyah Required Courses,CSCI 1304,Probability and Statistics,3,,
+201,BIT,Kulliyyah Required Courses,CSCI 1305,Introduction to Software Engineering,3,,
+201,BIT,Kulliyyah Required Courses,INFO 4303,Technopreneurship,3,INFO 1302,
+201,BIT,Kulliyyah Required Courses,CSCI 3300,Operating Systems,3,CSCI 1302,
+201,BIT,Kulliyyah Required Courses,INFO 3307,Human Computer Interaction,3,INFO 2304,
+201,BIT,Kulliyyah Required Courses,LM 2026,Bahasa Melayu Kerjaya (Malaysian Only),2,,
+201,BIT,Department Required Courses for BIT,INFO 2302,Web Technologies,3,,
+201,BIT,Department Required Courses for BIT,CSCI 2300,Data Structures and Algorithms I,3,CSCI 1301,
+201,BIT,Department Required Courses for BIT,CSCI 2301,Computer Networking,3,CSCI 1303,
+201,BIT,Department Required Courses for BIT,INFO 2303,Database Programming,3,INFO 1303,
+201,BIT,Department Required Courses for BIT,CSCI 2303,Principles of IT Security,3,CSCI 2301,
+201,BIT,Department Required Courses for BIT,INFO 2305,Multimedia Technology,3,,
+201,BIT,Department Required Courses for BIT,INFO 2306,Management of Information Systems,3,INFO 1302,
+201,BIT,Department Required Courses for BIT,INFO 3305,Web Application Development,3,INFO 2302,
+201,BIT,Department Required Courses for BIT,INFO 3304,E-Commerce,3,"INFO 2305, INFO 2302",
+201,BIT,Department Required Courses for BIT,INFO 3308,Project Management in IT,3,INFO 2304,
+201,BIT,Department Required Courses for BIT,INFO 4305,Cyber Law and Ethics,3,INFO 3307,
+201,BIT,Department Required Courses for BIT,INFO 4401,Final Year Project I,4,"CSCI 1304, CSCI 2301, INFO 2303, INFO 2304, INFO 2305, INFO 3305",
+201,BIT,Department Required Courses for BIT,INFO 4402,Final Year Project II,4,INFO 4401,
+201,BIT,Department Required Courses for BIT,INFO 4901,Industrial Attachment,9,Passed all courses,
+201,BIT,Specialization: Digital Media Design,INFO 4320,Animation Technique,3,INFO 2305,
+201,BIT,Specialization: Digital Media Design,INFO 4321,Creative Design Technique,3,INFO 2305,
+201,BIT,Specialization: Digital Media Design,INFO 4322,Digital Content Design,3,INFO 2305,
+201,BIT,Specialization: Digital Media Design,INFO 4328,Game Design & Development,3,INFO 4320,
+201,BIT,Specialization: Digital Media Design,INFO 4327,New Media Technology Content and Applications,3,INFO 2305,
+201,BIT,Specialization: Digital Media Design,INFO 4324,Digital Audio and Video Technology,3,INFO 2305,
+201,BIT,Specialization: Digital Media Design,INFO 4325,Graphic Design,3,INFO 4321,
+201,BIT,Specialization: Digital Media Design,INFO 4326,3D Modelling,3,INFO 2305,
+201,BIT,Specialization: Business Intelligence and Information Science,INFO 4311,Data Warehousing,3,INFO 2303,
+201,BIT,Specialization: Business Intelligence and Information Science,INFO 4310,Data Mining,3,INFO 2302,
+201,BIT,Specialization: Business Intelligence and Information Science,INFO 4312,Information Visualization,3,INFO 3307,
+201,BIT,Specialization: Business Intelligence and Information Science,INFO 4314,Business Data Analytics,3,INFO 2303,
+201,BIT,Specialization: Business Intelligence and Information Science,CSCI 4343,Data Science,3,CSCI 2304,
+201,BIT,Specialization: Business Intelligence and Information Science,INFO 4335,Mobile Application Development,3,INFO 3305,
+201,BIT,Specialization: Business Intelligence and Information Science,INFO 4340,Management of Information Security,3,CSCI 2303,
+201,BIT,Specialization: Enterprise Technology Management,INFO 4330,Control and Audit of Information Systems,3,"INFO 2304, INFO 2306",
+201,BIT,Specialization: Enterprise Technology Management,INFO 4331,Information Resource and Strategy Management,3,"INFO 3304, INFO 3308",
+201,BIT,Specialization: Enterprise Technology Management,INFO 4333,Integrated Business Process and ERP Systems,3,INFO 3304,
+201,BIT,Specialization: Enterprise Technology Management,INFO 4332,Knowledge Management Practices and Applications,3,,
+201,BIT,Specialization: Enterprise Technology Management,INFO 4334,Web Application Framework,3,INFO 1303,
+201,BIT,Specialization: Enterprise Technology Management,INFO 4336,Information Retrieval Technologies,3,,
+201,BIT,Specialization: Enterprise Technology Management,INFO 4335,Mobile Application Development,3,INFO 3305,
+201,BIT,Specialization: Information Assurance and Security,INFO 4340,Management of Information Security,3,CSCI 2303,
+201,BIT,Specialization: Information Assurance and Security,INFO 4342,Business Continuity & Disaster Recovery,3,CSCI 2303,
+201,BIT,Specialization: Information Assurance and Security,INFO 4341,Risk Management,3,CSCI 2303,
+201,BIT,Specialization: Information Assurance and Security,INFO 4330,Control and Audit of Information Systems,3,"INFO 2304, INFO 2306",
+201,BIT,Specialization: Information Assurance and Security,INFO 4343,Information Privacy,3,CSCI 2303,
+201,BIT,Specialization: Information Assurance and Security,INFO 4344,Physical Protective Security,3,CSCI 2303,
+201,BIT,Specialization: Information Assurance and Security,INFO 4345,Web Application Security,3,INFO 3305,
+201,BIT,Specialization: Information Assurance and Security,CSCI 4333,Cryptography,3,CSCI 2305,
+201,BIT,Specialization: Information Assurance and Security,CSCI 4342,Digital Evidence Forensic,3,"CSCI 2303, CSCI 3300, CSCI 3301",
+201,BIT,Specialization: Information Assurance and Security,CSCI 4312,Blockchain and Application,3,CSCI 1301,
+201,BIT,Specialization: Digitalpreneurship,INFO 4351,Digitalpreneurship,3,INFO 4303,
+201,BIT,Specialization: Digitalpreneurship,INFO 4352,Digitalpreneurship Customer Development,3,INFO 4303,
+201,BIT,Specialization: Digitalpreneurship,INFO 4353,Digitalpreneurship Marketing,3,INFO 4303,
+201,BIT,Specialization: Digitalpreneurship,INFO 4354,Digitalpreneurship Finance,3,INFO 4303,
+201,BIT,Specialization: Digitalpreneurship,INFO 4355,Digitalpreneurship Fintech,3,INFO 4303,
+201,BIT,Specialization: Digitalpreneurship,INFO 4356,Healthcare Digitalpreneurship,3,INFO 4303,
+201,BIT,Specialization: Digitalpreneurship,INFO 4357,Social Digitalpreneurship,3,INFO 4303,

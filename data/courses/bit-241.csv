@@ -1,0 +1,82 @@
+plan,programme,category,course_code,course_name,credit_hours,prerequisite,offering_dept
+241,BIT,Core Computing Courses,BIIT 1301,Database Programming,3,,DIS
+241,BIT,Core Computing Courses,BIIT 1303,System Analysis and Design,3,BICS 1301,DIS
+241,BIT,Core Computing Courses,BIIT 3304,ICT and Islam,3,3rd Year,DIS
+241,BIT,Core Computing Courses,BICS 1301,Elements of Programming,3,,DCS
+241,BIT,Core Computing Courses,BICS 1302,Introduction to Computer Organisation,3,,DCS
+241,BIT,Core Computing Courses,BICS 1303,Computer Networking,3,BICS 1302,DCS
+241,BIT,Core Computing Courses,BICS 2305,Operating Systems,3,BICS 1302,DCS
+241,BIT,University Required Courses,UNGS 1301,Basic Philosophy and Islamic Worldview,3,,IRKHS
+241,BIT,University Required Courses,UNGS 2290,Knowledge & Civilization in Islam,2,UNGS 1301,IRKHS
+241,BIT,University Required Courses,UNGS 2380,Ethics and Fiqh of Contemporary Issues,3,UNGS 2290,IRKHS
+241,BIT,University Required Courses,TQTD 1002,Tilawah Al-Quran 1,0.5,,CELPAD
+241,BIT,University Required Courses,TQTD 2002,Tilawah Al-Quran 2,0.5,TQTD 1002,CELPAD
+241,BIT,University Required Courses,LQAD 1003,Arabic for Ibadah 1,0.5,,CELPAD
+241,BIT,University Required Courses,LQAD 2003,Arabic for Ibadah 2,0.5,LQAD 1003,CELPAD
+241,BIT,University Required Courses,CCUB 1061,Usrah 1,0.5,,STADD
+241,BIT,University Required Courses,CCUB 1062,Usrah 2,0.5,CCUB 1061,STADD
+241,BIT,University Required Courses,LEED 1301,English for Academic Writing,3,,CELPAD
+241,BIT,University Required Courses,CCFM 2061,Family Management,0.5,,STADD
+241,BIT,University Required Courses,CCLM 2051,Leadership,0.5,,STADD
+241,BIT,University Required Courses,CCSS 1020/CCSS 2010/CCSS 3010,Skills 1,0.5,,STADD
+241,BIT,University Required Courses,CCSS 1020/CCSS 2010/CCSS 3010,Skills 2,0.5,,STADD
+241,BIT,University Required Courses,LMBD 1131,Bahasa Melayu I (International Only),1,,CELPAD
+241,BIT,University Required Courses,LMBD 1132,Bahasa Melayu II (International Only),1,LMBD 1131,CELPAD
+241,BIT,University Required Courses,LM 2026,Bahasa Melayu Kerjaya (Malaysian Only),2,,
+241,BIT,University Required Courses,SCSH 1201,"Sustainable Development Issues, Principles and Practices",2,,SC4SH
+241,BIT,University Required Courses,SCSH 2163,Usrah in Action 1 (SD: Community Profiling),1,SCSH 1201,SC4SH
+241,BIT,University Required Courses,SCSH 3164,Usrah in Action 2,1,SCSH 2163,SC4SH
+241,BIT,Discipline Core Courses,BIIT 1302,Organisational Informatics,3,,DIS
+241,BIT,Discipline Core Courses,BIIT 2301,User Experience Design,3,BIIT 1303,DIS
+241,BIT,Discipline Core Courses,BIIT 2302,Management of Information Security,3,BIIT 1302,DIS
+241,BIT,Discipline Core Courses,BIIT 2303,Network Infrastructure Management,3,BICS 1303,DIS
+241,BIT,Discipline Core Courses,BIIT 2304,Technopreneurship,3,2nd Year,DIS
+241,BIT,Discipline Core Courses,BIIT 2305,Web Application Development,3,BICS 1304 and BIIT 2301,DIS
+241,BIT,Discipline Core Courses,BIIT 3301,Cloud Computing,3,BIIT 2305,DIS
+241,BIT,Discipline Core Courses,BIIT 3302,Mobile Application Development,3,BIIT 2305,DIS
+241,BIT,Discipline Core Courses,BIIT 3303,Cyber Law and Ethics,3,BIIT 2305,DIS
+241,BIT,Discipline Core Courses,BICS 1304,Object-Oriented Programming,3,BICS 1301,DCS
+241,BIT,Discipline Core Courses,BICS 1305,Discrete Structures,3,,DCS
+241,BIT,Discipline Core Courses,BICS 2303,Intelligent Systems,3,BICS 1305,DCS
+241,BIT,Field Electives,BIIT/BICS XXXX,Field Elective I,3,Course Specific,DIS/DCS
+241,BIT,Field Electives,BIIT/BICS XXXX,Field Elective II,3,Course Specific,DIS/DCS
+241,BIT,Field Electives,BIIT/BICS XXXX,Field Elective III,3,Course Specific,DIS/DCS
+241,BIT,Field Electives,BIIT/BICS XXXX,Field Elective IV,3,Course Specific,DIS/DCS
+241,BIT,Field Electives,BIIT/BICS,Field Elective V,3,Course,DIS/DCS
+241,BIT,Field Electives,BIIT/BICS XXXX,Field Elective VI,3,Course Specific,DIS/DCS
+241,BIT,Free Electives,,Free Elective I,3,Course,XXX
+241,BIT,Free Electives,,Free Elective II,3,Course Specific,XXX
+241,BIT,Free Electives,,Free Elective III,3,Course Specific,XXX
+241,BIT,Free Electives,,Free Elective IV,3,Course Specific,XXX
+241,BIT,Final Year Project,BIIT 4321,Final Year Project I,3,"BIIT 1301, BIIT 2303, BIIT 2305",DIS
+241,BIT,Final Year Project,BIIT 4421,Final Year Project II,4,BIIT 4321,DIS
+241,BIT,Industrial Attachment,BIIT 4901,Industrial Attachment,9,Complete All Courses,DIS
+241,BIT,Field Electives: Cybersecurity (Core),BIIT 4330,Cyber Risk Management,3,BIIT 2302,
+241,BIT,Field Electives: Cybersecurity (Core),BIIT 4331,Business Continuity and Disaster Recovery,3,BIIT 2302,
+241,BIT,Field Electives: Cybersecurity (Core),BIIT 4332,IT Control and Audit,3,BIIT 1302,
+241,BIT,Field Electives: Cybersecurity (Core),BIIT 4333,Web Application Security,3,BIIT 2305,
+241,BIT,Field Electives: Cybersecurity (Non-core),BIIT 4334,Information Privacy and Protection,3,BIIT 2302,
+241,BIT,Field Electives: Cybersecurity (Non-core),BIIT 4335,Critical Infrastructure and Physical Security,3,BIIT 2302,
+241,BIT,Field Electives: Cybersecurity (Non-core),BIIT 4336,Incident Handling and Response,3,BIIT 2302,
+241,BIT,Field Electives: Cloud Computing and System Paradigm (Core),BIIT 4340,Cloud Computing Services,3,BIIT 3301,
+241,BIT,Field Electives: Cloud Computing and System Paradigm (Core),BIIT 4341,Information Resource and Strategy Management,3,"BIIT 1303, BIIT 2305",
+241,BIT,Field Electives: Cloud Computing and System Paradigm (Core),BIIT 4342,Integrated Business Process and ERP Systems,3,BIIT 2305,
+241,BIT,Field Electives: Cloud Computing and System Paradigm (Core),BICS 4336,Block Chain and Application,3,,
+241,BIT,Field Electives: Cloud Computing and System Paradigm (Non-core),BIIT 4343,Knowledge Management Practices and Applications,3,BIIT 2305,
+241,BIT,Field Electives: Cloud Computing and System Paradigm (Non-core),BICS 4374,Internet-of-Things Applications,3,BICS 1302,
+241,BIT,Field Electives: Innovative Digital Experience (IDEx) (Core),BIIT 4350,Sustainable Content Design,3,BIIT 2301,
+241,BIT,Field Electives: Innovative Digital Experience (IDEx) (Core),BIIT 4351,Applied Motion Design,3,BIIT 2301,
+241,BIT,Field Electives: Innovative Digital Experience (IDEx) (Core),BIIT 4352,Audio and Video Communication Design,3,BIIT 2301,
+241,BIT,Field Electives: Innovative Digital Experience (IDEx) (Core),BIIT 4353,Visual Communication Technology,3,BIIT 2301,
+241,BIT,Field Electives: Innovative Digital Experience (IDEx) (Non-core),BIIT 4354,CGI Content Creation,3,BIIT 2301,
+241,BIT,Field Electives: Innovative Digital Experience (IDEx) (Non-core),BIIT 4355,Application Game Design,3,BIIT 2301,
+241,BIT,Field Electives: Data Analytics (Core),BIIT 4360,Business Intelligence and Data Modelling,3,BIIT 1301,
+241,BIT,Field Electives: Data Analytics (Core),BIIT 4361,Data Mining in Business,3,BIIT 1301,
+241,BIT,Field Electives: Data Analytics (Core),BIIT 4362,Business Data Analytics,3,BIIT 1301,
+241,BIT,Field Electives: Data Analytics (Core),BIIT 4363,Data Visualisation,3,BIIT 2301,
+241,BIT,Field Electives: Data Analytics (Non-core),BIIT 4364,Artificial Intelligence in Business,3,BICS 2303,
+241,BIT,Field Electives: Digital Transformation (Core),BIIT 4370,Digital Commerce Platform,3,,
+241,BIT,Field Electives: Digital Transformation (Core),BIIT 4371,Agile Project Management,3,BIIT 1303,
+241,BIT,Field Electives: Digital Transformation (Core),BIIT 4372,Digital and Sejahtera Society,3,,
+241,BIT,Field Electives: Digital Transformation (Core),BIIT 4373,Customer Journey Centred Digital Marketing,3,,
+241,BIT,Field Electives: Digital Transformation (Non-core),BIIT 4374,"Digital Resources, Strategy and Governance",3,,
