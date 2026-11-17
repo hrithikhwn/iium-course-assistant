@@ -50,7 +50,7 @@ def test_retries_with_new_query_then_stops():
     llm, ret = FakeLLM(grades), FakeRetriever()
     result = CourseAgent(llm, ret, max_retries=2).run("Can I skip the prereq?", batch=241, programme="BCS")
     assert ret.queries == ["Can I skip the prereq?", "prerequisite rules", "course prerequisites policy"]
-    assert len(result.sources) == 3  # context accumulates across searches
+    assert len(result.context) == 3  # context accumulates across searches
 
 
 def test_retry_loop_is_bounded():
@@ -129,12 +129,13 @@ def test_found_answer_keeps_sources():
     assert result.found and result.sources and result.answer.endswith("[1].")
 
 
-@pytest.mark.parametrize("reply", [NOT_FOUND, "not_found", f"  {NOT_FOUND}\n"])
+@pytest.mark.parametrize("reply", [NOT_FOUND, "not_found", f"  {NOT_FOUND}\n", f"[2] {NOT_FOUND}"])
 def test_model_not_found_becomes_fixed_message_without_sources(reply):
     result = run_bcs(FakeLLM(['{"sufficient": true, "reason": "ok"}'], answer=reply), FakeRetriever())
     assert not result.found
     assert result.answer == NOT_FOUND_MESSAGE
     assert result.sources == []
+    assert len(result.context) == 2      # kept: tells a wrong refusal apart from a search miss
     assert result.steps[-1].detail == f"model replied {NOT_FOUND} from 2 excerpts"  # question + rewrite
 
 
@@ -192,9 +193,9 @@ def test_context_sent_to_the_model_stays_within_budget():
               '{"sufficient": true, "reason": "ok"}']
     result = CourseAgent(FakeLLM(grades), BigRetriever(), max_retries=2, max_context_chars=3500).run(
         "When is FYP?", batch=241, programme="BCS")
-    assert sum(len(c.text) + len(c.citation()) + 10 for c in result.sources) <= 3500
-    assert len(result.sources) == 3
-    assert all(c.text.startswith("b ") for c in result.sources)   # the newest search comes first
+    assert sum(len(c.text) + len(c.citation()) + 10 for c in result.context) <= 3500
+    assert len(result.context) == 3
+    assert all(c.text.startswith("b ") for c in result.context)   # the newest search comes first
 
 
 def test_question_comes_after_the_excerpts():
@@ -221,3 +222,62 @@ def test_grader_suggesting_the_question_itself_is_not_searched_again():
     ret = FakeRetriever()
     CourseAgent(FakeLLM(grades), ret, max_retries=2).run("When is FYP?", batch=241, programme="BCS")
     assert ret.queries == ["When is FYP?", "prerequisite rules"]
+
+
+def test_rewrite_off_searches_the_question_only():
+    llm, ret = FakeLLM(['{"sufficient": true, "reason": "ok"}']), FakeRetriever()
+    result = CourseAgent(llm, ret, rewrite=False).run("When is FYP?", batch=241, programme="BCS")
+    assert llm.calls == [GRADE_SYSTEM, ANSWER_SYSTEM]          # no plan call
+    assert ret.queries == ["When is FYP?"]
+    assert [s.name for s in result.steps] == ["student", "plan", "retrieve", "grade", "answer"]
+    assert "off" in result.steps[1].detail                    # the trace still says what happened
+
+
+# --------------------------------------------------------------- citations --
+
+def answer_with(reply):
+    llm = FakeLLM(['{"sufficient": true, "reason": "ok"}'], answer=reply)
+    return CourseAgent(llm, FakeRetriever()).run("Can I skip the prereq?", batch=241, programme="BCS")
+
+
+def test_sources_are_only_the_excerpts_the_answer_cites():
+    result = answer_with("You need BICS 1301 first [2].")
+    assert len(result.context) == 2                          # question + rewrite searches
+    assert result.sources == [result.context[1]]
+    assert result.answer == "You need BICS 1301 first [1]."  # renumbered to match the sources list
+
+
+def test_unknown_citations_are_removed_and_noted_in_the_trace():
+    result = answer_with("You need BICS 1301 first [1]. Fees apply [9].")
+    assert result.answer == "You need BICS 1301 first [1]. Fees apply."
+    assert "[9]" in result.steps[-1].detail
+
+
+def test_answer_without_citations_is_kept_but_has_no_sources():
+    result = answer_with("You need BICS 1301 first.")
+    assert result.found and result.answer == "You need BICS 1301 first."
+    assert result.sources == [] and len(result.context) == 2
+    assert "no citations" in result.steps[-1].detail
+
+
+def test_not_found_after_a_real_answer_is_cut_off():
+    """Seen live: the model answered from one excerpt, then judged another."""
+    result = answer_with(f"[1] You need BICS 1301 first. [2] {NOT_FOUND}")
+    assert result.found
+    assert result.answer == "[1] You need BICS 1301 first."
+    assert result.sources == [result.context[0]]        # [2] was only cited by the marker
+    assert f"removed {NOT_FOUND}" in result.steps[-1].detail
+
+
+def test_section_numbers_used_as_citations_are_removed():
+    """Seen live: "[35.1]" for SAPER rule 35.1 instead of an excerpt number."""
+    result = answer_with("Probation starts below a CGPA of 2.00 [35.1].")
+    assert result.answer == "Probation starts below a CGPA of 2.00."
+    assert result.sources == []
+    assert "[35.1]" in result.steps[-1].detail
+
+
+def test_empty_reply_is_not_found():
+    result = answer_with("")
+    assert not result.found and result.answer == NOT_FOUND_MESSAGE
+    assert result.steps[-1].detail == "empty reply from 2 excerpts"

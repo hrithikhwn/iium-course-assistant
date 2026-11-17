@@ -9,11 +9,11 @@ An **agentic RAG** assistant that answers questions about IIUM courses, handbook
 
 Plain RAG retrieves once and hopes for the best. This agent:
 
-1. **Plans** — rewrites the question into a good search query
+1. **Plans** — rewrites the question into a keyword query, searched along with the question itself (`QUERY_REWRITE=false` skips this LLM call)
 2. **Retrieves** — hybrid search (embeddings + BM25 keywords) over the student's own study plan and the university-wide rules
 3. **Grades** — asks the LLM whether the excerpts are actually enough
 4. **Retries** — if not, writes a new query and searches again (bounded loop)
-5. **Answers** — only from the excerpts, with citations, or says it couldn't find it
+5. **Answers** — only from the excerpts, citing them as `[1]`, `[2]`, or says it couldn't find it. The sources list shows only the excerpts the answer cites, and a citation to an excerpt that doesn't exist is removed
 
 ## Architecture
 
@@ -24,7 +24,7 @@ flowchart LR
     R --> G{Grade:<br/>enough context?}
     G -- no, new query --> R
     G -- yes / max retries --> A[Answer with citations]
-    A --> OUT[Answer + sources]
+    A --> OUT[Answer + cited sources]
 
     subgraph Ingest [Offline ingest]
         D[PDFs in data/raw/&lt;folder&gt;<br/>course tables in data/courses] --> C[Chunk + page, plan, programme]
@@ -81,7 +81,7 @@ app/
   config.py      settings from .env
   llm.py         swappable OpenAI-compatible LLM client
   embeddings.py  Ollama embeddings
-  text.py        chunking, batch → study plan, keyword search, JSON parsing (pure, unit-tested)
+  text.py        chunking, batch → study plan, keyword search, JSON parsing, citations (pure, unit-tested)
   ingest.py      PDFs + course CSVs → tagged chunks → Chroma
   retriever.py   hybrid search (embeddings + BM25), filtered by study plan
   agent.py       plan → retrieve → grade → retry → answer loop

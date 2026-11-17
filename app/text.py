@@ -1,5 +1,5 @@
 """Pure helpers: chunking, batch tags, course tables, JSON extraction,
-context formatting.
+context formatting, citations.
 
 No network or database access here, so everything is easy to unit-test.
 """
@@ -322,3 +322,62 @@ def dedupe(chunks: list[Chunk]) -> list[Chunk]:
             seen.add(key)
             out.append(c)
     return out
+
+
+# ------------------------------------------------------------- citations --
+
+# "[2]" or "[2, 5]", with the whitespace before it (removed with an unknown
+# citation). Decimals are matched too: the model sometimes cites a document's
+# own section numbers ("[35.1]" for SAPER rule 35.1) instead of an excerpt number.
+CITATION_RE = re.compile(r"(\s*)\[(\d+(?:\.\d+)*(?:\s*,\s*\d+(?:\.\d+)*)*)\]")
+
+
+@dataclass
+class Cited:
+    answer: str            # the answer with citations renumbered [1], [2], ... in order of first use
+    sources: list[Chunk]   # the cited excerpts in that order: [n] is sources[n - 1]
+    numbers: list[int]     # their numbers in the context the model saw, for the trace
+    unknown: list[str]     # cited numbers that were not excerpts ("9", "35.1"); removed from the answer
+
+
+def renumber_citations(answer: str, chunks: list[Chunk]) -> Cited:
+    """Keep only the excerpts an answer cites, and renumber its citations to match.
+
+    The model sees every excerpt in the context (often 10 or more) but cites
+    two or three, so listing all of them as sources would hide the ones it
+    used. A number that isn't an excerpt ([0], one past the end, or a section
+    number like [35.1]) is removed from the text instead of pointing at
+    nothing. Only number citations are touched: "[2]", "[2, 5]", "[1][3]"."""
+    new_number: dict[int, int] = {}      # number in the context -> number in the answer
+    unknown: list[str] = []
+
+    def renumber(m: re.Match) -> str:
+        kept = set()
+        for item in (x.strip() for x in m.group(2).split(",")):
+            if item.isdigit() and 1 <= int(item) <= len(chunks):
+                kept.add(new_number.setdefault(int(item), len(new_number) + 1))
+            elif item not in unknown:
+                unknown.append(item)
+        return f"{m.group(1)}[{', '.join(map(str, sorted(kept)))}]" if kept else ""
+
+    text = CITATION_RE.sub(renumber, answer).strip()
+    numbers = list(new_number)
+    return Cited(text, [chunks[n - 1] for n in numbers], numbers, unknown)
+
+
+def strip_marker(reply: str, marker: str) -> str:
+    """The model's answer without its "can't answer" marker, or "" when the
+    reply is that marker (the excerpts don't answer the question).
+
+    A reply that starts with the marker counts, also after a citation
+    ("[2] NOT_FOUND"). The 7B model sometimes writes it after a real answer
+    as well, judging the excerpts one by one ("... BIIT 2305. [7] NOT_FOUND");
+    then the marker and the citation in front of it are removed and the answer
+    is kept. A reply with nothing but citations left counts as no answer."""
+    brackets = r"\[[^\]]*\]"
+    head = re.sub(brackets, "", reply).lstrip(" \t\r\n.,;:*-\"'`")
+    if head.upper().startswith(marker.upper()):
+        return ""
+    after_answer = rf"(?:(?<=[.!?\n\]])|^)\s*(?:{brackets}\s*)*{re.escape(marker)}\b[.!]?"
+    text = re.sub(after_answer, "", reply, flags=re.IGNORECASE).strip()
+    return text if re.search(r"\w", re.sub(brackets, "", text)) else ""

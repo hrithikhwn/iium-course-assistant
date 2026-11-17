@@ -8,7 +8,7 @@ from .config import settings
 from .llm import LLM
 from .retriever import Retriever
 from .text import (Chunk, dedupe, drop_invented_codes, extract_json, fit_context, format_context,
-                   plan_for)
+                   plan_for, renumber_citations, strip_marker)
 
 ASK_STUDENT = "Which programme are you in (BCS or BIT), and what's your batch (e.g. 241)?"
 
@@ -51,11 +51,19 @@ Reply with JSON only:
 
 NOT_FOUND = "NOT_FOUND"   # what the answer model replies when the excerpts don't answer the question
 
+# In live runs the 7B model once cited a document's own section numbers ("[35.1]"
+# for SAPER rule 35.1) instead of excerpt numbers, and once ended a correct answer
+# with "[7] NOT_FOUND", judging the excerpts one by one. The citation and NOT_FOUND
+# lines below target both. Old vs new wording on the same excerpts (5 eval
+# questions x 3 replies): refused 6/6 both, cited a real excerpt 9/9 both, put the
+# citation before the fact ("[3] You need...") 6/9 -> 0/9. Neither failure came
+# back with either wording, so text.renumber_citations and text.strip_marker are
+# what keep them from reaching the student.
 ANSWER_SYSTEM = f"""You are an assistant for IIUM students. Answer the question ONLY from the numbered excerpts.
 - Write the answer in your own words in 1-3 sentences. Do not copy whole excerpts.
-- Put the excerpt number in brackets after each fact, like [2].
+- After each fact, put the number of its excerpt in brackets, like [2]: the number shown before the excerpt, never a section or page number from its text.
 - Course tables list each course as "- CODE Name: credit hours; prerequisite: ...". If the question is about a course, use its line.
-- If the excerpts do not contain the answer, reply with exactly {NOT_FOUND} and nothing else. Do not guess."""
+- If none of the excerpts answer the question, reply with exactly {NOT_FOUND} and nothing else. Do not guess."""
 
 
 def excerpts_then_question(question: str, chunks: list[Chunk]) -> str:
@@ -77,6 +85,7 @@ class Step:
 @dataclass
 class Result:
     answer: str
+    # the excerpts the answer cites, in the order of its [1], [2], ... citations
     sources: list[Chunk]
     steps: list[Step] = field(default_factory=list)
     seconds: float = 0.0
@@ -86,16 +95,21 @@ class Result:
     # False when the documents don't answer the question; `answer` is then
     # NOT_FOUND_MESSAGE and there are no sources to cite
     found: bool = True
+    # every excerpt the model was shown, cited or not (also when not found), so
+    # the eval can tell "retrieved but not cited" from "never retrieved"
+    context: list[Chunk] = field(default_factory=list)
 
 
 class CourseAgent:
     def __init__(self, llm: LLM, retriever: Retriever, top_k: int = settings.top_k,
-                 max_retries: int = settings.max_retries, max_context_chars: int = settings.max_context_chars):
+                 max_retries: int = settings.max_retries, max_context_chars: int = settings.max_context_chars,
+                 rewrite: bool = settings.query_rewrite):
         self.llm = llm
         self.retriever = retriever
         self.top_k = top_k
         self.max_retries = max_retries
         self.max_context_chars = max_context_chars   # excerpts sent to grade/answer, see text.fit_context
+        self.rewrite = rewrite                       # False: no plan-step LLM call, search the question only
 
     def plan(self, question: str) -> str:
         reply = extract_json(self.llm.chat(PLAN_SYSTEM, question))
@@ -146,12 +160,19 @@ class CourseAgent:
             return self._ask_for_student(str(e), steps, start)
         steps.append(Step("student", f"{programme} {batch} -> plan {plan}"))
 
-        query = self.plan(question)
-        steps.append(Step("plan", query))
+        # The plan step: rewrite the question into a keyword query. Switchable because
+        # the question alone found as many answers in testing; the Phase 4 eval decides.
+        if self.rewrite:
+            query = self.plan(question)
+            steps.append(Step("plan", query))
+        else:
+            query = question.strip()
+            steps.append(Step("plan", "rewrite off: searching the question only"))
 
         context: list[Chunk] = []
         tried = {query.lower(), question.strip().lower()}
-        queries = [question, query]          # first search: the student's own words and the rewrite
+        # first search: the student's own words, plus the rewrite if there is one
+        queries = [question, query] if self.rewrite else [question]
         for attempt in range(self.max_retries + 1):
             # 2. Search only this student's plan and programme, plus the 'all' documents
             found = self.retrieve(queries, plan, programme)
@@ -175,17 +196,33 @@ class CourseAgent:
         # 3. Answer only from what was found, or say so.
         if not context:                                   # nothing retrieved: don't ask the LLM at all
             steps.append(Step("answer", "no excerpts found -> not found"))
-            return self._not_found(steps, start)
-        text = self.answer(question, context)
-        if text.strip().upper().startswith(NOT_FOUND):    # the model says the excerpts don't answer it
-            steps.append(Step("answer", f"model replied {NOT_FOUND} from {len(context)} excerpts"))
-            return self._not_found(steps, start)
-        steps.append(Step("answer", f"{len(context)} excerpts in context"))
-        return Result(answer=text, sources=context, steps=steps, seconds=time.perf_counter() - start)
+            return self._not_found(steps, start, context)
+        reply = self.answer(question, context)
+        # "" when the model says the excerpts don't answer it (or wrote nothing);
+        # a NOT_FOUND it added after a real answer is cut off here
+        text = strip_marker(reply, NOT_FOUND)
+        if not text:
+            why = f"model replied {NOT_FOUND}" if NOT_FOUND in reply.upper() else "empty reply"
+            steps.append(Step("answer", f"{why} from {len(context)} excerpts"))
+            return self._not_found(steps, start, context)
 
-    def _not_found(self, steps: list[Step], start: float) -> Result:
+        # 4. Sources are only the excerpts the answer cites, renumbered [1], [2], ...
+        # to match. An answer without citations is kept (the model sometimes drops
+        # them from a correct answer); the trace says so and the eval counts it.
+        cited = renumber_citations(text, context)
+        detail = f"{len(context)} excerpts in context; "
+        detail += f"cited excerpts {cited.numbers}" if cited.sources else "no citations"
+        if cited.unknown:                                 # numbers that weren't excerpts: [9], [35.1]
+            detail += f"; removed unknown citations [{', '.join(cited.unknown)}]"
+        if NOT_FOUND in reply.upper():
+            detail += f"; removed {NOT_FOUND} after the answer"
+        steps.append(Step("answer", detail))
+        return Result(answer=cited.answer, sources=cited.sources, steps=steps,
+                      seconds=time.perf_counter() - start, context=context)
+
+    def _not_found(self, steps: list[Step], start: float, context: list[Chunk]) -> Result:
         return Result(answer=NOT_FOUND_MESSAGE, sources=[], steps=steps,
-                      seconds=time.perf_counter() - start, found=False)
+                      seconds=time.perf_counter() - start, found=False, context=context)
 
     def _ask_for_student(self, reason: str, steps: list[Step], start: float) -> Result:
         steps.append(Step("student", reason))

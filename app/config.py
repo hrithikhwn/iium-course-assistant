@@ -17,6 +17,11 @@ def _int(name: str, default: int) -> int:
     return int(os.getenv(name, default))
 
 
+def _bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name, "").strip().lower()
+    return raw in {"1", "true", "yes", "on"} if raw else default
+
+
 @dataclass(frozen=True)
 class Settings:
     # LLM — any OpenAI-compatible endpoint (Ollama exposes one at /v1)
@@ -45,6 +50,10 @@ class Settings:
     # hybrid search: this many of the best embedding hits and the best keyword
     # hits always make the top k (0 = plain rank fusion)
     search_guaranteed: int = field(default_factory=lambda: _int("SEARCH_GUARANTEED", 2))
+    # plan step: the LLM rewrites the question into a search query, searched along
+    # with the question. Off = search the question only, one LLM call fewer. Both
+    # found the answer for 13/13 eval questions, so the Phase 4 eval decides.
+    query_rewrite: bool = field(default_factory=lambda: _bool("QUERY_REWRITE", True))
     max_retries: int = field(default_factory=lambda: _int("MAX_RETRIES", 2))
     # Most excerpt text sent to the LLM in one prompt. Ollama's default window is
     # 4096 tokens (~3.5 characters each) and longer prompts are cut silently,

@@ -225,3 +225,79 @@ def test_fuse_keeps_each_lists_best_hits():
     out = fuse([vector, keyword], k=3, guaranteed=1)
     assert "fyp" in out and "faq" in out and len(out) == 3
     assert out == [i for i in ["faq", "a", "b", "fyp"] if i in out]   # still in fused order
+
+
+# --------------------------------------------------------------- citations --
+
+from app.text import renumber_citations  # noqa: E402
+
+
+def excerpts(n):
+    return [Chunk(f"excerpt {i}", "doc.pdf", i) for i in range(1, n + 1)]
+
+
+def test_only_cited_excerpts_are_kept_and_renumbered_in_order_of_use():
+    chunks = excerpts(5)
+    cited = renumber_citations("FYP I needs 80 credits [4]. It is run by DCS [2, 4]. Again [4].", chunks)
+    assert cited.answer == "FYP I needs 80 credits [1]. It is run by DCS [1, 2]. Again [1]."
+    assert cited.sources == [chunks[3], chunks[1]]
+    assert cited.numbers == [4, 2]
+    assert cited.unknown == []
+
+
+def test_numbers_that_are_not_excerpts_are_removed_and_reported():
+    chunks = excerpts(3)
+    cited = renumber_citations("Add/drop ends in week 2 [2]. Fees are due [7]. See also [0, 3].", chunks)
+    assert cited.answer == "Add/drop ends in week 2 [1]. Fees are due. See also [2]."
+    assert cited.sources == [chunks[1], chunks[2]]
+    assert cited.unknown == ["7", "0"]
+
+
+def test_section_numbers_are_not_excerpt_numbers():
+    """Seen live: SAPER's rule numbers cited instead of excerpt numbers."""
+    chunks = excerpts(3)
+    cited = renumber_citations("Probation starts below a CGPA of 2.00 [35.1]. "
+                               "The load is then at most 18 credits [2, 35.2].", chunks)
+    assert cited.answer == "Probation starts below a CGPA of 2.00. The load is then at most 18 credits [1]."
+    assert cited.sources == [chunks[1]]
+    assert cited.unknown == ["35.1", "35.2"]
+
+
+def test_repeated_and_adjacent_citations():
+    chunks = excerpts(3)
+    cited = renumber_citations("A [3][1]. B [3, 3].", chunks)
+    assert cited.answer == "A [1][2]. B [1]."
+    assert cited.sources == [chunks[2], chunks[0]]
+
+
+@pytest.mark.parametrize("answer", ["No citation here.", "Week 2 [of Semester I] or [2026/27].", ""])
+def test_text_without_citations_is_unchanged(answer):
+    cited = renumber_citations(answer, excerpts(2))
+    assert (cited.answer, cited.sources, cited.unknown) == (answer, [], [])
+
+
+# ------------------------------------------------------- not-found marker --
+
+from app.text import strip_marker  # noqa: E402
+
+
+@pytest.mark.parametrize("reply", [
+    "NOT_FOUND", "not_found", "  NOT_FOUND\n", "**NOT_FOUND**",
+    "[2] NOT_FOUND",                                    # after a citation
+    "NOT_FOUND. The excerpts only list 2025 fees.",     # starts with it: still no answer
+    "", "[3].",                                         # nothing but citations left
+])
+def test_replies_that_mean_no_answer(reply):
+    assert strip_marker(reply, "NOT_FOUND") == ""
+
+
+@pytest.mark.parametrize("reply, answer", [
+    # seen live: answered from one excerpt, then judged another one
+    ("[3] FYP I needs BIIT 1301. [7] NOT_FOUND", "[3] FYP I needs BIIT 1301."),
+    ("FYP I needs BIIT 1301 [3]. NOT_FOUND.", "FYP I needs BIIT 1301 [3]."),   # keeps the answer's [3]
+    ("FYP I needs BIIT 1301 [3] NOT_FOUND", "FYP I needs BIIT 1301 [3]"),
+    ("FYP I needs BIIT 1301 [3].\n[7] NOT_FOUND", "FYP I needs BIIT 1301 [3]."),
+    ("No marker here [1].", "No marker here [1]."),
+])
+def test_marker_after_a_real_answer_is_cut_off(reply, answer):
+    assert strip_marker(reply, "NOT_FOUND") == answer
