@@ -4,7 +4,7 @@
 
 Reads the five study plans under data/raw/ and writes data/courses/<folder>.csv
 with columns: plan, programme, category, course_code, course_name,
-credit_hours, prerequisite, offering_dept.
+credit_hours, prerequisite, offering_dept, page (the PDF page, for citations).
 
 The output is a first draft: check every CSV by hand against the PDF before
 using it. Rows the script was unsure about are printed at the end.
@@ -51,7 +51,7 @@ PLANS = {
 }
 
 COLUMNS = ["plan", "programme", "category", "course_code", "course_name",
-           "credit_hours", "prerequisite", "offering_dept"]
+           "credit_hours", "prerequisite", "offering_dept", "page"]   # page: for citations
 
 # "BICS 1301", "LMBD1132", "BICS/BIIT XXXX"
 CODE_RE = re.compile(r"\b([A-Z]{2,4}(?:/[A-Z]{2,4})?)\s?(\d{4}|X{4})\b")
@@ -560,6 +560,7 @@ def to_row(c: Course, plan: str, programme: str, source: str) -> dict:
         "credit_hours": credit,
         "prerequisite": norm_prereq(c.get("prerequisite")),
         "offering_dept": c.get("offering_dept"),
+        "page": c.page,
         "_raw_code": c.get("course_code"),     # not written; used by fix_skills
     }
 

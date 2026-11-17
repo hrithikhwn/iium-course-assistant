@@ -28,10 +28,14 @@ class Settings:
     # Embeddings — Ollama native API
     ollama_url: str = field(default_factory=lambda: os.getenv("OLLAMA_URL", "http://localhost:11434"))
     embed_model: str = field(default_factory=lambda: os.getenv("EMBED_MODEL", "nomic-embed-text"))
+    # task prefixes nomic-embed-text expects; "" for embedding models without them
+    embed_doc_prefix: str = field(default_factory=lambda: os.getenv("EMBED_DOC_PREFIX", "search_document: "))
+    embed_query_prefix: str = field(default_factory=lambda: os.getenv("EMBED_QUERY_PREFIX", "search_query: "))
 
     # Storage
     raw_dir: Path = field(default_factory=lambda: Path(os.getenv("RAW_DIR", "data/raw")))
     chroma_dir: Path = field(default_factory=lambda: Path(os.getenv("CHROMA_DIR", "data/chroma")))
+    courses_dir: Path = field(default_factory=lambda: Path(os.getenv("COURSES_DIR", "data/courses")))
     collection: str = field(default_factory=lambda: os.getenv("COLLECTION", "iium_docs"))
 
     # Retrieval / agent
