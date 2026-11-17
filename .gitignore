@@ -221,3 +221,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# University documents and vector store: never commit
+data/raw/
+data/chroma/
