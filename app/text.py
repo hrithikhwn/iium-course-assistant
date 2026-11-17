@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Hashable
 from dataclasses import dataclass
 
 
@@ -72,17 +73,53 @@ def plan_filter(plan: str, programme: str) -> dict:
 
 # ---------------------------------------------------------- keyword search --
 
-CODE_RE = re.compile(r"\b([A-Z]{2,4})\s?(\d{4})\b")
+# Short words that sit before a 4-digit number without being a course prefix:
+# "Semester II 2026/2027", "Dec 2025", "Year 2027".
+NOT_PREFIXES = ("I|II|III|IV|V|VI|VII|VIII|IX|X|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|SEPT|OCT|NOV|DEC"
+                "|YEAR|SEM|WEEK|DAY|PAGE|NO|AND|THE|FOR|OF|IN|ON|AT|BY|TO|IS|OR")
+CODE_RE = re.compile(rf"\b(?!(?:{NOT_PREFIXES})\b)([A-Z]{{2,4}})\s?(\d{{4}})\b")
 STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "before", "can", "do", "does", "for", "from",
     "how", "i", "i'm", "im", "in", "is", "it", "me", "my", "of", "on", "or", "the", "to",
     "what", "when", "where", "which", "who", "will", "with", "you",
+    "m", "s", "t", "d", "ll", "re", "ve",     # left over from splitting "I'm", "student's", "don't"
 }
 
 
 def codes_in(text: str) -> list[str]:
     """Course codes in a string, normalised: 'BIIT4321' -> 'BIIT 4321'."""
     return [f"{a} {b}" for a, b in CODE_RE.findall(text.upper())]
+
+
+def drop_invented_codes(query: str, question: str) -> str:
+    """Remove course codes from an LLM-written query that the student's
+    question doesn't contain. 'BICS 3062 prerequisite' for a question about
+    Data Structures -> 'prerequisite'. Codes the student wrote are kept.
+
+    Only upper-case codes count here (that is how the model writes them):
+    matching any case would also catch words like 'exam 2026'."""
+    allowed = set(codes_in(question))
+
+    def keep(m: re.Match) -> str:
+        return m.group(0) if f"{m.group(1)} {m.group(2)}" in allowed else ""
+
+    return re.sub(r"\s+", " ", CODE_RE.sub(keep, query)).strip()
+
+
+def fit_context(chunks: list[Chunk], max_chars: int) -> list[Chunk]:
+    """Keep chunks, in order, while their total size fits in max_chars
+    (always at least one). Ollama gives models a 4096-token window by default
+    and silently cuts longer prompts from the front, which removes the system
+    prompt, so the agent must never send more than fits."""
+    out: list[Chunk] = []
+    used = 0
+    for c in chunks:
+        size = len(c.text) + len(c.citation()) + 10     # format_context adds "[n] (citation)\n"
+        if out and used + size > max_chars:
+            continue                                     # a later, smaller chunk may still fit
+        out.append(c)
+        used += size
+    return out
 
 
 def tokenize(text: str) -> list[str]:
@@ -138,14 +175,30 @@ class BM25:
         return [i for _, i in sorted(scored, reverse=True)[:n]]
 
 
-def rrf(rankings: list[list[str]], k: int = 60) -> list[str]:
+def rrf(rankings: list[list[Hashable]], k: int = 60) -> list[Hashable]:
     """Reciprocal rank fusion: merge ranked id lists; an id high in either
     list ends up high in the result."""
-    score: dict[str, float] = {}
+    score: dict[Hashable, float] = {}
     for ranking in rankings:
         for rank, item in enumerate(ranking, 1):
             score[item] = score.get(item, 0.0) + 1.0 / (k + rank)
     return sorted(score, key=lambda i: -score[i])
+
+
+def fuse(rankings: list[list[Hashable]], k: int, guaranteed: int = 0) -> list[Hashable]:
+    """Top k of the rank-fused lists, where the first `guaranteed` items of
+    every list are always included. Plain fusion gives an item nothing for
+    lists it is missing from, so a course table that only keyword search
+    finds (rank 2 there, absent from the embedding list) ends up 6th or 7th;
+    guaranteed slots keep each method's best hits. Result is in fused order."""
+    order = rrf(rankings)
+    must = list(dict.fromkeys(i for ranking in rankings for i in ranking[:guaranteed]))[:k]
+    chosen = set(must)
+    for i in order:
+        if len(chosen) >= k:
+            break
+        chosen.add(i)
+    return [i for i in order if i in chosen]
 
 
 def matches_filter(meta: dict, plan: str | None, programme: str | None) -> bool:

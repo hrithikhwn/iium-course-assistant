@@ -4,9 +4,11 @@
     python scripts/check_retrieval.py --k 10
     python scripts/check_retrieval.py --no-filter  # search every plan, to compare
     python scripts/check_retrieval.py --vector-only
+    python scripts/check_retrieval.py --planned    # rewrite each question with the agent's plan step first
 
 For each question in eval/questions.csv that has a source_file, the question
-is searched as-is (no query rewriting) and graded:
+is searched as-is (or, with --planned, the way the agent's first search does it:
+the question plus the plan step's rewrite, fused; needs the LLM) and graded:
 
   fact  one of the top-k chunks contains every key fact of the answer
   page  a chunk from the expected file and page is in the top k
@@ -73,7 +75,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--k", type=int, default=settings.top_k)
     parser.add_argument("--no-filter", action="store_true", help="ignore the question's plan and programme")
-    parser.add_argument("--vector-only", action="store_true", help="embeddings only, no keyword search")
+    mode = parser.add_mutually_exclusive_group()   # --planned always uses the agent's (hybrid) search
+    mode.add_argument("--vector-only", action="store_true", help="embeddings only, no keyword search")
+    mode.add_argument("--planned", action="store_true", help="search like the agent's first search: "
+                                                            "the question plus the plan step's rewrite")
     parser.add_argument("--questions", type=Path, default=ROOT / "eval" / "questions.csv")
     args = parser.parse_args()
 
@@ -81,6 +86,12 @@ def main() -> int:
         questions = [q for q in csv.DictReader(f) if q["source_file"].strip()]
 
     retriever = ChromaRetriever()
+    planner = None
+    if args.planned:
+        from app.agent import CourseAgent
+        from app.llm import OpenAICompatibleLLM
+
+        planner = CourseAgent(OpenAICompatibleLLM(), retriever)
     search = retriever.vector_search if args.vector_only else retriever.search
     tally = {"fact": 0, "page": 0, "file": 0, "MISS": 0}
     graded_on_facts = 0
@@ -88,7 +99,13 @@ def main() -> int:
     for q in questions:
         filtered = not args.no_filter and q["plan"] != "all"
         kwargs = {"plan": q["plan"], "programme": q["programme"]} if filtered else {}
-        results = search(q["question"], k=args.k, **kwargs)
+        if planner:   # what the agent's first search does: the question and its rewrite, fused
+            query = planner.plan(q["question"])
+            planner.top_k = args.k
+            results = planner.retrieve([q["question"], query], kwargs.get("plan"), kwargs.get("programme"))
+        else:
+            query = q["question"]
+            results = search(query, k=args.k, **kwargs)
         level, rank = grade(q, results)
         tally[level] += 1
         facts = key_facts(q)
@@ -96,11 +113,15 @@ def main() -> int:
         needs = ", ".join(facts) if facts else f"p.{q['page']} of {q['source_file'][:22]}"
         top = results[0].citation() if results else "-"
         print(f"{q['id']:<5}{level:<6}{rank or '-':<6}{needs[:36]:<38}{top[:55]}")
+        if planner:
+            print(f"{'':<17}query: {query}")
 
     n = len(questions)
     good = tally["fact"] + tally["page"]
-    mode = "vector only" if args.vector_only else "hybrid"
-    print(f"\nanswer found in top {args.k}: {good}/{n} ({good / n:.0%})"
+    mode = ("vector only" if args.vector_only else "hybrid") + (", planned queries" if planner else ", raw questions")
+    where = (f"the first search's context (top {args.k} for the question + top {args.k} for the rewrite)"
+             if planner else f"top {args.k}")
+    print(f"\nanswer found in {where}: {good}/{n} ({good / n:.0%})"
           f"   [{graded_on_facts} graded on key facts, {n - graded_on_facts} on page]"
           f"   wrong chunk, right file: {tally['file']}   miss: {tally['MISS']}"
           f"   ({mode}, {'no filter' if args.no_filter else 'filtered by plan'})")

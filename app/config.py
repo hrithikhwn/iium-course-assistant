@@ -42,7 +42,14 @@ class Settings:
     chunk_size: int = field(default_factory=lambda: _int("CHUNK_SIZE", 900))
     chunk_overlap: int = field(default_factory=lambda: _int("CHUNK_OVERLAP", 150))
     top_k: int = field(default_factory=lambda: _int("TOP_K", 5))
+    # hybrid search: this many of the best embedding hits and the best keyword
+    # hits always make the top k (0 = plain rank fusion)
+    search_guaranteed: int = field(default_factory=lambda: _int("SEARCH_GUARANTEED", 2))
     max_retries: int = field(default_factory=lambda: _int("MAX_RETRIES", 2))
+    # Most excerpt text sent to the LLM in one prompt. Ollama's default window is
+    # 4096 tokens (~3.5 characters each) and longer prompts are cut silently,
+    # losing the instructions. Raise it only together with OLLAMA_CONTEXT_LENGTH.
+    max_context_chars: int = field(default_factory=lambda: _int("MAX_CONTEXT_CHARS", 11000))
 
 
 settings = Settings()

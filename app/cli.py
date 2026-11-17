@@ -38,9 +38,10 @@ def main() -> None:
         print()
 
     print(result.answer)
-    print("\nSources:")
-    for i, c in enumerate(result.sources, 1):
-        print(f"  [{i}] {c.citation()}")
+    if result.sources:
+        print("\nSources:")
+        for i, c in enumerate(result.sources, 1):
+            print(f"  [{i}] {c.citation()}")
     print(f"\n({result.seconds:.1f}s)")
 
 

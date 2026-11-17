@@ -10,7 +10,7 @@ An **agentic RAG** assistant that answers questions about IIUM courses, handbook
 Plain RAG retrieves once and hopes for the best. This agent:
 
 1. **Plans** — rewrites the question into a good search query
-2. **Retrieves** — top-k chunks from a local vector store
+2. **Retrieves** — hybrid search (embeddings + BM25 keywords) over the student's own study plan and the university-wide rules
 3. **Grades** — asks the LLM whether the excerpts are actually enough
 4. **Retries** — if not, writes a new query and searches again (bounded loop)
 5. **Answers** — only from the excerpts, with citations, or says it couldn't find it
@@ -20,14 +20,14 @@ Plain RAG retrieves once and hopes for the best. This agent:
 ```mermaid
 flowchart LR
     Q[Student question] --> P[Plan: rewrite query]
-    P --> R[Retrieve top-k<br/>Chroma]
+    P --> R[Hybrid search<br/>embeddings + BM25<br/>student's plan only]
     R --> G{Grade:<br/>enough context?}
     G -- no, new query --> R
     G -- yes / max retries --> A[Answer with citations]
     A --> OUT[Answer + sources]
 
     subgraph Ingest [Offline ingest]
-        D[PDFs / TXT in data/raw] --> C[Chunk + page metadata]
+        D[PDFs in data/raw/&lt;folder&gt;<br/>course tables in data/courses] --> C[Chunk + page, plan, programme]
         C --> E[Embed<br/>nomic-embed-text]
         E --> V[(Chroma vector store)]
     end
@@ -57,15 +57,22 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements.txt
 cp .env.example .env
 
-# 3. Add documents (handbook, course outlines, academic calendar) to data/raw/
+# 3. Download the documents listed in sources.md into the folder shown for each
+#    (data/raw/all/, data/raw/bcs-241/, ...). The folder says which students a
+#    document applies to. Study plan course tables come from data/courses/*.csv.
 python -m app.ingest
 
-# 4. Ask
-python -m app.cli "What is the minimum CGPA to avoid probation?" --trace
+# 4. Ask (programme and batch pick the right study plan)
+python -m app.cli "What is the minimum CGPA to avoid probation?" --programme BCS --batch 241 --trace
 
 # or run the API
-uvicorn app.main:app --reload    # then POST /ask {"question": "..."}
+uvicorn app.main:app --reload    # then POST /ask {"question": "...", "programme": "BCS", "batch": 241}
+
+# check retrieval against the eval questions
+python scripts/check_retrieval.py
 ```
+
+Ollama runs models with a 4096-token context window by default and silently cuts longer prompts, so the agent keeps the excerpts it sends under `MAX_CONTEXT_CHARS` (see `.env.example`).
 
 ## Project structure
 
@@ -74,13 +81,18 @@ app/
   config.py      settings from .env
   llm.py         swappable OpenAI-compatible LLM client
   embeddings.py  Ollama embeddings
-  text.py        chunking, JSON parsing, context formatting (pure, unit-tested)
-  ingest.py      PDF/TXT → chunks → Chroma
-  retriever.py   vector search
+  text.py        chunking, batch → study plan, keyword search, JSON parsing (pure, unit-tested)
+  ingest.py      PDFs + course CSVs → tagged chunks → Chroma
+  retriever.py   hybrid search (embeddings + BM25), filtered by study plan
   agent.py       plan → retrieve → grade → retry → answer loop
   cli.py         command-line interface
   main.py        FastAPI server
+scripts/
+  extract_tables.py   study plan PDFs → data/courses/*.csv
+  check_retrieval.py  how often search finds the answer to each eval question
 tests/           unit tests (run in CI)
+eval/            evaluation questions with expected answers and sources
+data/courses/    study plan course tables, extracted and hand-checked
 data/raw/        your documents (git-ignored)
 ```
 
@@ -88,14 +100,14 @@ data/raw/        your documents (git-ignored)
 
 - [ ] **Evaluation set** — 30–50 real questions with expected answers; measure accuracy and citation correctness
 - [ ] **Model comparison** — same eval across qwen2.5:3b / 7b, llama3.1:8b and a hosted model (speed vs. accuracy table)
-- [ ] **Hybrid search** — add BM25 keyword search for course codes like `INFO 4303`
+- [x] **Hybrid search** — BM25 keyword search alongside embeddings, for course names and codes like `BIIT 4321`
 - [ ] **Bahasa Melayu** support
 - [ ] **Web UI** (Streamlit or a simple React page)
 - [ ] Docker compose for one-command setup
 
 ## A note on documents
 
-University documents are not included in this repo. Put your own copies in `data/raw/` (git-ignored) and check that you're allowed to use them before deploying publicly.
+University documents are not included in this repo. `sources.md` lists each one with its official link; put your own copies in `data/raw/<folder>/` (git-ignored) and check that you're allowed to use them before deploying publicly.
 
 ## License
 

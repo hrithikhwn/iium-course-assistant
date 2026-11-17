@@ -173,3 +173,55 @@ def test_matches_filter_mirrors_plan_filter():
     assert not matches_filter({"plan": "241", "programme": "BIT"}, "241", "BCS")
     assert not matches_filter({"plan": "201", "programme": "BCS"}, "241", "BCS")
     assert matches_filter({"plan": "201", "programme": "BCS"}, None, None)
+
+
+@pytest.mark.parametrize("query, question, out", [
+    ("BICS 3062 prerequisite", "What's the prereq for Data Structures?", "prerequisite"),
+    ("BICS 3062 Data Structures prerequisite", "prereq for Data Structures?", "Data Structures prerequisite"),
+    ("final exam Semester II 2026/2027", "When is the final exam?", "final exam Semester II 2026/2027"),
+    ("exam 2026 period", "exam period?", "exam 2026 period"),     # lower case: not treated as a code
+    ("BICS 2302 prerequisite", "prereq for BICS2302?", "BICS 2302 prerequisite"),
+    ("BICS 3062", "prereq for x", ""),
+])
+def test_drop_invented_codes(query, question, out):
+    from app.text import drop_invented_codes
+    assert drop_invented_codes(query, question) == out
+
+
+def test_codes_in_ignores_semesters_months_and_years():
+    text = "Semester II 2026/2027, from Dec 2025 to Year 2027; LM 2026 and BIIT4321"
+    assert codes_in(text) == ["LM 2026", "BIIT 4321"]
+
+
+# ------------------------------------------------------------ context fit --
+
+from app.text import fit_context  # noqa: E402
+
+
+def test_fit_context_keeps_order_and_stays_under_budget():
+    chunks = [Chunk("a" * 400, "x.pdf", 1), Chunk("b" * 400, "x.pdf", 2),
+              Chunk("c" * 400, "x.pdf", 3), Chunk("d" * 50, "x.pdf", 4)]
+    kept = fit_context(chunks, max_chars=1000)
+    assert [c.page for c in kept] == [1, 2, 4]            # 3 doesn't fit; the small 4 still does
+    assert sum(len(c.text) + len(c.citation()) + 10 for c in kept) <= 1000
+
+
+def test_fit_context_always_keeps_one_chunk():
+    assert len(fit_context([Chunk("z" * 5000, "x.pdf", 1)], max_chars=100)) == 1
+
+
+# ------------------------------------------------------------- fused search --
+
+from app.text import fuse  # noqa: E402
+
+
+def test_fuse_without_guarantees_is_plain_rank_fusion():
+    vector, keyword = ["faq", "a", "b", "c"], ["fyp", "faq", "a", "b"]
+    assert fuse([vector, keyword], k=3) == ["faq", "a", "b"]          # fyp, only in one list, drops out
+
+
+def test_fuse_keeps_each_lists_best_hits():
+    vector, keyword = ["faq", "a", "b", "c"], ["fyp", "faq", "a", "b"]
+    out = fuse([vector, keyword], k=3, guaranteed=1)
+    assert "fyp" in out and "faq" in out and len(out) == 3
+    assert out == [i for i in ["faq", "a", "b", "fyp"] if i in out]   # still in fused order

@@ -2,7 +2,11 @@
 
     uvicorn app.main:app --reload
     curl -X POST localhost:8000/ask -H 'content-type: application/json' \
-         -d '{"question": "When is the add/drop deadline?"}'
+         -d '{"question": "When is the add/drop deadline?", "programme": "BCS", "batch": 241}'
+
+Without programme and batch the agent doesn't search; the reply has
+needs_student_info=true and asks for them, and the client asks the student
+and sends the question again.
 """
 from __future__ import annotations
 
@@ -21,6 +25,8 @@ app = FastAPI(title="IIUM Course Assistant", version="0.1.0")
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=1000)
+    programme: str | None = Field(default=None, description="BCS or BIT")
+    batch: int | str | None = Field(default=None, description="e.g. 241, or a matric number")
     trace: bool = False
 
 
@@ -33,6 +39,8 @@ class Source(BaseModel):
 class AskResponse(BaseModel):
     answer: str
     sources: list[Source]
+    needs_student_info: bool = False   # true: ask for programme and batch, then send again
+    found: bool = True                 # false: the documents don't answer this question
     steps: list[dict] | None = None
     seconds: float
     model: str
@@ -51,12 +59,14 @@ def health() -> dict:
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest) -> AskResponse:
     try:
-        result = get_agent().run(req.question)
+        result = get_agent().run(req.question, batch=req.batch, programme=req.programme)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     return AskResponse(
         answer=result.answer,
         sources=[Source(ref=i, citation=c.citation(), excerpt=c.text[:300]) for i, c in enumerate(result.sources, 1)],
+        needs_student_info=result.needs_student_info,
+        found=result.found,
         steps=[{"name": s.name, "detail": s.detail} for s in result.steps] if req.trace else None,
         seconds=round(result.seconds, 2),
         model=settings.llm_model,

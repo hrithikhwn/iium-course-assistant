@@ -11,7 +11,17 @@ from __future__ import annotations
 from typing import Protocol
 
 from .config import settings
-from .text import BM25, Chunk, matches_filter, plan_filter, rrf
+from .text import BM25, Chunk, fuse, matches_filter, plan_filter
+
+
+def chroma_client():
+    """The local Chroma store, with Chroma's anonymous usage telemetry off:
+    nothing about the documents or questions should leave the machine."""
+    import chromadb
+    from chromadb.config import Settings as ChromaSettings
+
+    return chromadb.PersistentClient(path=str(settings.chroma_dir),
+                                     settings=ChromaSettings(anonymized_telemetry=False))
 
 
 class Retriever(Protocol):
@@ -30,12 +40,10 @@ def _chunk(text: str, meta: dict) -> Chunk:
 
 
 class ChromaRetriever:
-    def __init__(self, collection=None, embedder=None, candidates: int = 20):
+    def __init__(self, collection=None, embedder=None, candidates: int = 20,
+                 guaranteed: int = settings.search_guaranteed):
         if collection is None:
-            import chromadb
-
-            client = chromadb.PersistentClient(path=str(settings.chroma_dir))
-            collection = client.get_or_create_collection(settings.collection)
+            collection = chroma_client().get_or_create_collection(settings.collection)
         if embedder is None:
             from .embeddings import OllamaEmbedder
 
@@ -43,7 +51,9 @@ class ChromaRetriever:
         self.collection = collection
         self.embedder = embedder
         self.candidates = candidates      # how deep each method looks before merging
-        self._bm25 = None                 # built on first keyword search
+        self.guaranteed = guaranteed      # each method's top hits that always make the results (text.fuse)
+        self._bm25 = None                 # keyword index, built on first keyword search
+        self._bm25_ids: set[str] = set()  # ids it was built from
 
     def _check(self, plan, programme) -> str | None:
         if self.collection.count() == 0:
@@ -59,10 +69,14 @@ class ChromaRetriever:
         return list(zip(res["ids"][0], res["documents"][0], res["metadatas"][0]))
 
     def _keyword(self, query: str, n: int, plan, programme) -> list[tuple[str, str, dict]]:
-        if self._bm25 is None:
+        # Rebuild when the collection changed (a re-ingest while the API is
+        # running). Ids are content hashes, so any edited chunk changes them.
+        ids = set(self.collection.get(include=[])["ids"])
+        if self._bm25 is None or ids != self._bm25_ids:
             data = self.collection.get(include=["documents", "metadatas"])
             self._docs = list(zip(data["ids"], data["documents"], data["metadatas"]))
             self._bm25 = BM25([d for _, d, _ in self._docs])
+            self._bm25_ids = set(data["ids"])
         hits = [self._docs[i] for i in self._bm25.top(query, len(self._docs))]
         return [h for h in hits if matches_filter(h[2], plan, programme)][:n]
 
@@ -81,5 +95,5 @@ class ChromaRetriever:
         vector = self._vector(query, self.candidates, plan, programme)
         keyword = self._keyword(query, self.candidates, plan, programme)
         by_id = {i: (d, m) for i, d, m in vector + keyword}
-        merged = rrf([[i for i, _, _ in vector], [i for i, _, _ in keyword]])
-        return [_chunk(*by_id[i]) for i in merged[:k]]
+        merged = fuse([[i for i, _, _ in vector], [i for i, _, _ in keyword]], k, self.guaranteed)
+        return [_chunk(*by_id[i]) for i in merged]

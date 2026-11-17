@@ -767,6 +767,7 @@ def fix_word_case(name: str) -> str:
 def tidy_plans(plans: dict[str, list[dict]]) -> int:
     """Tidy names, categories and text prerequisites in place; return how many
     course names changed."""
+    originals = [r["course_name"] for rows in plans.values() for r in rows]
     for rows in plans.values():
         for r in rows:
             r["course_name"] = tidy_punctuation(r["course_name"])
@@ -782,20 +783,18 @@ def tidy_plans(plans: dict[str, list[dict]]) -> int:
             if codes_in(r["course_code"]) and "XXXX" not in r["course_code"] and not r["course_name"].isupper():
                 canonical.setdefault(r["course_code"], r["course_name"])
 
-    changed = 0
     for rows in plans.values():
         for r in rows:
-            before = r["original_name"] = r["course_name"]
             other = canonical.get(r["course_code"])
-            if other and same_course_name(before, other):
+            if other and same_course_name(r["course_name"], other):
                 r["course_name"] = other
             elif r["course_name"].isupper():
                 r["course_name"] = smart_title(r["course_name"])
             if r["prerequisite"].isupper() and not codes_in(r["prerequisite"]):
                 r["prerequisite"] = smart_title(r["prerequisite"])      # 'COURSE SPECIFIC'
             r["category"] = smart_title(r["category"]).replace("(Non-Core)", "(Non-core)")
-            changed += r["course_name"] != before
-    return changed
+    tidied = [r["course_name"] for rows in plans.values() for r in rows]
+    return sum(a != b for a, b in zip(originals, tidied))
 
 
 def main() -> int:

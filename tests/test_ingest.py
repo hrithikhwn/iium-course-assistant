@@ -31,7 +31,7 @@ def docs(tmp_path, monkeypatch):
     real_load = ingest.load_file
 
     def fake_load(path):
-        if path.name == "plan.pdf":
+        if path.suffix == ".pdf":              # every test PDF is an empty file
             return [("scrambled course table text", 1), ("YEAR 1 SEMESTER 1 BICS 1301", 3)]
         return real_load(path)
 
@@ -143,3 +143,99 @@ def test_embedder_adds_task_prefixes(monkeypatch):
     emb.embed_documents(["FYP rules"])
     emb.embed_query("When can I take FYP?")
     assert seen == ["search_document: FYP rules", "search_query: When can I take FYP?"]
+
+
+# ------------------------------------------------------------------- sync --
+
+class SyncCollection:
+    def __init__(self, ids):
+        self.ids = set(ids)
+        self.deleted, self.upserted = [], []
+
+    def get(self, include):
+        return {"ids": sorted(self.ids)}
+
+    def delete(self, ids):
+        self.deleted += ids
+        self.ids -= set(ids)
+
+    def upsert(self, ids, documents, embeddings, metadatas):
+        self.upserted += ids
+        self.ids |= set(ids)
+
+
+def test_sync_removes_chunks_that_no_longer_exist():
+    new = [Chunk("FYP I needs 90 credits", "plan.pdf", 1, "241", "BCS")]
+    col = SyncCollection(["old-version-of-an-edited-chunk"])
+    removed = ingest.sync_collection(col, new, [[0.0]])
+    assert removed == 1 and col.deleted == ["old-version-of-an-edited-chunk"]
+    assert col.ids == {ingest.chunk_id(new[0])}
+
+
+def test_sync_upserts_in_batches():
+    chunks = [Chunk(f"chunk {i}", "a.pdf", 1) for i in range(7)]
+    col = SyncCollection([])
+    ingest.sync_collection(col, chunks, [[0.0]] * 7, batch=3)
+    assert len(col.upserted) == 7 and len(col.ids) == 7
+
+
+def test_same_file_in_two_folders_gets_two_ids():
+    a = Chunk("same text", "faq.pdf", 1, "241", "BCS")
+    b = Chunk("same text", "faq.pdf", 1, "241", "BIT")
+    assert ingest.chunk_id(a) != ingest.chunk_id(b)
+    assert ingest.unique_chunks([a, a, b]) == [a, b]
+
+
+# ------------------------------------------------------------- CSV checks --
+
+def test_csv_saved_by_excel_with_bom_still_loads(docs):
+    raw, courses = docs
+    path = courses / "bcs-241.csv"
+    path.write_bytes(b"\xef\xbb\xbf" + path.read_bytes())      # UTF-8 byte-order mark
+    plan = [c for c in ingest.build_chunks(raw, courses) if c.source == "plan.pdf"]
+    assert any("BICS 4321" in c.text for c in plan)
+
+
+@pytest.mark.parametrize("field, value, message", [
+    ("programme", "BIT", "doesn't match its folder"),
+    ("page", "", "page must be a page number"),
+])
+def test_bad_csv_rows_are_reported(docs, field, value, message):
+    raw, courses = docs
+    path = courses / "bcs-241.csv"
+    with path.open(encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    rows[0][field] = value
+    write_csv(path, rows)
+    with pytest.raises(SystemExit, match=message):
+        ingest.build_chunks(raw, courses)
+
+
+def test_csv_missing_a_column_is_reported(docs):
+    raw, courses = docs
+    path = courses / "bcs-241.csv"
+    with path.open(encoding="utf-8") as f:
+        rows = [{k: v for k, v in r.items() if k != "page"} for r in csv.DictReader(f)]
+    write_csv(path, rows)
+    with pytest.raises(SystemExit, match="missing columns"):
+        ingest.build_chunks(raw, courses)
+
+
+def test_renamed_study_plan_pdf_is_warned_about(docs, capsys):
+    raw, courses = docs
+    (raw / "bcs-241" / "plan.pdf").rename(raw / "bcs-241" / "plan-v2.pdf")
+    ingest.build_chunks(raw, courses)
+    assert "plan.pdf not found" in capsys.readouterr().out
+
+
+# ------------------------------------------------------- keyword index age --
+
+def test_keyword_index_is_rebuilt_after_reingest():
+    col = FakeCollection()
+    r = ChromaRetriever(col, FakeEmbedder())
+    r.search("BICS 4321", k=3, plan="241", programme="BCS")           # builds the keyword index
+    col.DOCS = {**FakeCollection.DOCS, "new": (
+        "BCS study plan 241, Industrial Attachment:\n- BICS 4901 Industrial Attachment: 9 credit hours",
+        {"source": "plan.pdf", "page": 1, "plan": "241", "programme": "BCS"})}
+    hits = r.search("BICS 4901 Industrial Attachment", k=3, plan="241", programme="BCS")
+    assert any("BICS 4901" in c.text for c in hits)
