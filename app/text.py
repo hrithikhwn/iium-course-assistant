@@ -70,6 +70,91 @@ def plan_filter(plan: str, programme: str) -> dict:
     ]}
 
 
+# ---------------------------------------------------------- keyword search --
+
+CODE_RE = re.compile(r"\b([A-Z]{2,4})\s?(\d{4})\b")
+STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "before", "can", "do", "does", "for", "from",
+    "how", "i", "i'm", "im", "in", "is", "it", "me", "my", "of", "on", "or", "the", "to",
+    "what", "when", "where", "which", "who", "will", "with", "you",
+}
+
+
+def codes_in(text: str) -> list[str]:
+    """Course codes in a string, normalised: 'BIIT4321' -> 'BIIT 4321'."""
+    return [f"{a} {b}" for a, b in CODE_RE.findall(text.upper())]
+
+
+def tokenize(text: str) -> list[str]:
+    """Lowercase word tokens for keyword search, minus stopwords. A course code
+    also becomes one token ('biit4321'), so it matches as a unit."""
+    words = [w for w in re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", text.lower()) if w not in STOPWORDS]
+    return [singular(w) for w in words] + [c.replace(" ", "").lower() for c in codes_in(text)]
+
+
+def singular(word: str) -> str:
+    """Crude plural stripping so 'prerequisites' matches 'prerequisite' and
+    'courses' matches 'course'. Applied to queries and documents alike, so
+    it only has to be consistent, not correct English."""
+    if len(word) > 4 and word.endswith("ies"):
+        return word[:-3] + "y"
+    if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
+        return word[:-1]
+    return word
+
+
+class BM25:
+    """Okapi BM25 over a fixed list of documents. Rewards rare words that
+    appear in both the query and a document, so exact names and course codes
+    ('Final Year Project I', 'BIIT 4321') count for more than in embeddings."""
+
+    def __init__(self, docs: list[str], k1: float = 1.5, b: float = 0.75):
+        import math
+        from collections import Counter
+
+        self.k1, self.b = k1, b
+        self.tfs = [Counter(tokenize(d)) for d in docs]
+        self.lengths = [sum(tf.values()) for tf in self.tfs]
+        self.avg_len = (sum(self.lengths) / len(docs)) if docs else 0.0
+        df = Counter(t for tf in self.tfs for t in tf)
+        n = len(docs)
+        self.idf = {t: math.log(1 + (n - f + 0.5) / (f + 0.5)) for t, f in df.items()}
+
+    def scores(self, query: str) -> list[float]:
+        terms = set(tokenize(query))
+        out = []
+        for tf, length in zip(self.tfs, self.lengths):
+            s = 0.0
+            norm = self.k1 * (1 - self.b + self.b * length / self.avg_len) if self.avg_len else self.k1
+            for t in terms:
+                if t in tf:
+                    s += self.idf[t] * tf[t] * (self.k1 + 1) / (tf[t] + norm)
+            out.append(s)
+        return out
+
+    def top(self, query: str, n: int) -> list[int]:
+        """Indexes of the n best documents with a score above zero."""
+        scored = [(s, i) for i, s in enumerate(self.scores(query)) if s > 0]
+        return [i for _, i in sorted(scored, reverse=True)[:n]]
+
+
+def rrf(rankings: list[list[str]], k: int = 60) -> list[str]:
+    """Reciprocal rank fusion: merge ranked id lists; an id high in either
+    list ends up high in the result."""
+    score: dict[str, float] = {}
+    for ranking in rankings:
+        for rank, item in enumerate(ranking, 1):
+            score[item] = score.get(item, 0.0) + 1.0 / (k + rank)
+    return sorted(score, key=lambda i: -score[i])
+
+
+def matches_filter(meta: dict, plan: str | None, programme: str | None) -> bool:
+    """Python version of plan_filter, for searches done outside Chroma."""
+    if plan is None:
+        return True
+    return meta.get("plan") == "all" or (meta.get("plan") == plan and meta.get("programme") == programme)
+
+
 # --------------------------------------------------------- course tables --
 
 def course_line(row: dict) -> str:

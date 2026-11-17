@@ -130,3 +130,46 @@ def test_course_chunks_split_long_categories_and_repeat_header():
     assert all(len(c.text) <= 400 for c in chunks)
     assert all(c.text.startswith("BCS study plan 241, Core Computing Courses:") for c in chunks)
     assert sum(c.text.count("\n- ") for c in chunks) == 30
+
+
+# ---------------------------------------------------------- keyword search --
+
+from app.text import BM25, codes_in, matches_filter, rrf, singular, tokenize  # noqa: E402
+
+
+def test_codes_in_normalises_spacing():
+    assert codes_in("needs BIIT2305 and bics 1304, not 12345") == ["BIIT 2305", "BICS 1304"]
+
+
+def test_tokenize_drops_stopwords_strips_plurals_and_joins_codes():
+    assert tokenize("What are the prerequisites for BIIT 4321?") == ["prerequisite", "biit", "4321", "biit4321"]
+
+
+@pytest.mark.parametrize("word, base", [
+    ("prerequisites", "prerequisite"), ("courses", "course"), ("studies", "study"),
+    ("class", "class"), ("status", "status"), ("analysis", "analysis"), ("gps", "gps"),
+])
+def test_singular(word, base):
+    assert singular(word) == base
+
+
+def test_bm25_prefers_rare_exact_terms():
+    docs = ["Final Year Project rules and supervision in general",
+            "BIIT 4321 Final Year Project I: prerequisite BIIT 1301",
+            "Industrial attachment rules"]
+    bm = BM25(docs)
+    assert bm.top("Final Year Project I prerequisites", 3)[0] == 1
+    assert bm.top("BIIT 4321", 3) == [1]           # only documents that match at all
+    assert bm.top("tuition fees", 3) == []
+
+
+def test_rrf_rewards_items_high_in_either_list():
+    assert rrf([["a", "b", "c"], ["c", "d"]]) == ["c", "a", "b", "d"]
+
+
+def test_matches_filter_mirrors_plan_filter():
+    assert matches_filter({"plan": "all", "programme": "all"}, "241", "BCS")
+    assert matches_filter({"plan": "241", "programme": "BCS"}, "241", "BCS")
+    assert not matches_filter({"plan": "241", "programme": "BIT"}, "241", "BCS")
+    assert not matches_filter({"plan": "201", "programme": "BCS"}, "241", "BCS")
+    assert matches_filter({"plan": "201", "programme": "BCS"}, None, None)

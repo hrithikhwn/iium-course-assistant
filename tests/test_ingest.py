@@ -72,16 +72,34 @@ def test_file_outside_a_folder_is_an_error(docs):
 
 
 class FakeCollection:
+    """An 'all' FAQ page and two course tables (BCS 241, BIT 241). query()
+    always ranks the FAQ first, like embeddings did for course questions."""
+    DOCS = {
+        "faq": ("Registration FAQ: final year project placement and deadlines",
+                {"source": "faq.pdf", "page": 7, "plan": "all", "programme": "all"}),
+        "fyp": ("BCS study plan 241, Final Year Project:\n- BICS 4321 Final Year Project I: 3 credit hours",
+                {"source": "plan.pdf", "page": 1, "plan": "241", "programme": "BCS"}),
+        "bit": ("BIT study plan 241, Final Year Project:\n- BIIT 4321 Final Year Project I: 3 credit hours",
+                {"source": "bit.pdf", "page": 1, "plan": "241", "programme": "BIT"}),
+    }
+
     def __init__(self):
         self.where = "unset"
 
     def count(self):
-        return 1
+        return len(self.DOCS)
 
     def query(self, query_embeddings, n_results, where=None):
         self.where = where
-        return {"documents": [["FYP needs 90 credits"]],
-                "metadatas": [[{"source": "plan.pdf", "page": 1, "plan": "241", "programme": "BCS"}]]}
+        # like the real q09: the course table is not among the embedding hits at all
+        ids = ["faq"] if where else ["faq", "bit"]
+        ids = ids[:n_results]
+        return {"ids": [ids], "documents": [[self.DOCS[i][0] for i in ids]],
+                "metadatas": [[self.DOCS[i][1] for i in ids]]}
+
+    def get(self, include):
+        return {"ids": list(self.DOCS), "documents": [d for d, _ in self.DOCS.values()],
+                "metadatas": [m for _, m in self.DOCS.values()]}
 
 
 class FakeEmbedder:
@@ -91,9 +109,18 @@ class FakeEmbedder:
 
 def test_search_filters_by_plan_and_programme():
     col = FakeCollection()
-    chunks = ChromaRetriever(col, FakeEmbedder()).search("FYP", plan="241", programme="bcs")
+    chunks = ChromaRetriever(col, FakeEmbedder()).search("BICS 4321", plan="241", programme="bcs")
     assert col.where == {"$or": [{"$and": [{"plan": "241"}, {"programme": "BCS"}]}, {"plan": "all"}]}
-    assert chunks == [Chunk("FYP needs 90 credits", "plan.pdf", 1, "241", "BCS")]
+    assert {c.source for c in chunks} == {"plan.pdf", "faq.pdf"}      # BIT chunk filtered out of both searches
+
+
+def test_keyword_search_finds_course_chunk_that_embeddings_miss():
+    r = ChromaRetriever(FakeCollection(), FakeEmbedder())
+    query = dict(query="Final Year Project I BICS 4321", k=2, plan="241", programme="BCS")
+    assert [c.source for c in r.vector_search(**query)] == ["faq.pdf"]
+    hybrid = r.search(**query)
+    assert Chunk(FakeCollection.DOCS["fyp"][0], "plan.pdf", 1, "241", "BCS") in hybrid
+    assert all(c.programme in ("BCS", "all") for c in hybrid)
 
 
 def test_search_without_plan_searches_everything():

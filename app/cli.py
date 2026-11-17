@@ -1,6 +1,6 @@
 """Ask a question from the terminal.
 
-    python -m app.cli "What is the minimum CGPA to avoid probation?" --trace
+    python -m app.cli "What is the minimum CGPA to avoid probation?" --programme BCS --batch 241 --trace
 """
 from __future__ import annotations
 
@@ -14,11 +14,22 @@ from .retriever import ChromaRetriever
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ask the IIUM Course Assistant a question.")
     parser.add_argument("question", nargs="+")
+    parser.add_argument("--programme", help="BCS or BIT")
+    parser.add_argument("--batch", help="your batch, e.g. 241 (or your matric number)")
     parser.add_argument("--trace", action="store_true", help="show the agent's steps")
     args = parser.parse_args()
 
     agent = CourseAgent(OpenAICompatibleLLM(), ChromaRetriever())
-    result = agent.run(" ".join(args.question))
+    result = agent.run(" ".join(args.question), batch=args.batch, programme=args.programme)
+
+    if result.needs_student_info:
+        # ask once in the terminal (Enter keeps what was passed as a flag), then run again
+        print(result.answer)
+        programme = input(f"Programme (BCS/BIT) [{args.programme or ''}]: ").strip() or args.programme
+        batch = input(f"Batch, e.g. 241 [{args.batch or ''}]: ").strip() or args.batch
+        result = agent.run(" ".join(args.question), batch=batch, programme=programme)
+        if result.needs_student_info:
+            raise SystemExit(f"Sorry, I can't tell which study plan that is: {result.steps[-1].detail}")
 
     if args.trace:
         print("--- trace ---")

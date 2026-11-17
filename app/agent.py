@@ -7,7 +7,9 @@ from dataclasses import dataclass, field
 from .config import settings
 from .llm import LLM
 from .retriever import Retriever
-from .text import Chunk, dedupe, extract_json, format_context
+from .text import Chunk, dedupe, extract_json, format_context, plan_for
+
+ASK_STUDENT = "Which programme are you in (BCS or BIT), and what's your batch (e.g. 241)?"
 
 PLAN_SYSTEM = """You turn a student's question about IIUM (International Islamic University Malaysia) \
 courses, handbooks and academic rules into ONE short search query for a document search engine.
@@ -36,6 +38,9 @@ class Result:
     sources: list[Chunk]
     steps: list[Step] = field(default_factory=list)
     seconds: float = 0.0
+    # True when the agent stopped to ask for the student's batch/programme
+    # instead of answering; the CLI/UI should ask and call run() again
+    needs_student_info: bool = False
 
 
 class CourseAgent:
@@ -64,9 +69,19 @@ class CourseAgent:
         user = f"Question: {question}\n\nExcerpts:\n{format_context(chunks)}"
         return self.llm.chat(ANSWER_SYSTEM, user, temperature=0.2)
 
-    def run(self, question: str) -> Result:
+    def run(self, question: str, batch: int | str | None = None, programme: str | None = None) -> Result:
         start = time.perf_counter()
         steps: list[Step] = []
+
+        # 1. Which study plan does this student follow? Ask before doing any work.
+        if batch is None or not programme:
+            return self._ask_for_student("missing batch/programme", steps, start)
+        programme = programme.strip().upper()
+        try:
+            plan = plan_for(batch, programme)
+        except ValueError as e:
+            return self._ask_for_student(str(e), steps, start)
+        steps.append(Step("student", f"{programme} {batch} -> plan {plan}"))
 
         query = self.plan(question)
         steps.append(Step("plan", query))
@@ -74,9 +89,10 @@ class CourseAgent:
         context: list[Chunk] = []
         tried = {query.lower()}
         for attempt in range(self.max_retries + 1):
-            found = self.retriever.search(query, k=self.top_k)
+            # 2. Search only this student's plan and programme, plus the 'all' documents
+            found = self.retriever.search(query, k=self.top_k, plan=plan, programme=programme)
             context = dedupe(context + found)
-            steps.append(Step("retrieve", f"{len(found)} chunks for '{query}'"))
+            steps.append(Step("retrieve", f"{len(found)} chunks for '{query}' (plan {plan}, {programme})"))
 
             verdict = self.grade(question, context)
             steps.append(Step("grade", f"sufficient={verdict['sufficient']} — {verdict['reason']}"))
@@ -92,3 +108,8 @@ class CourseAgent:
         text = self.answer(question, context)
         steps.append(Step("answer", f"{len(context)} excerpts in context"))
         return Result(answer=text, sources=context, steps=steps, seconds=time.perf_counter() - start)
+
+    def _ask_for_student(self, reason: str, steps: list[Step], start: float) -> Result:
+        steps.append(Step("student", reason))
+        return Result(answer=ASK_STUDENT, sources=[], steps=steps,
+                      seconds=time.perf_counter() - start, needs_student_info=True)
