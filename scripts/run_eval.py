@@ -19,8 +19,8 @@ Scores (see app/scoring.py):
              fact; 'refuse' questions: it said it couldn't find it
   supported  the cited excerpts together contain every key fact
   retrieved  the excerpts the model was shown contain every key fact
-Each question is asked as a student of its plan and programme ('all'
-questions as BCS 241).
+Each question is asked as the student its `batch` column names (else the
+first batch of its plan), and questions about everyone as BCS 241.
 """
 from __future__ import annotations
 
@@ -77,8 +77,10 @@ class CountingLLM:
 
 
 def student(q: dict) -> tuple[int, str]:
-    """Who asks: the question's own plan and programme, or BCS 241 for 'all'."""
-    return (241, "BCS") if q["plan"] == "all" else (int(q["plan"]), q["programme"])
+    """Who asks: the batch in the question's batch column (else the first batch
+    of its plan) and its programme; BCS 241 for questions about everyone."""
+    batch = (q.get("batch") or "").strip() or ("241" if q["plan"] == "all" else q["plan"])
+    return int(batch), "BCS" if q["programme"] == "all" else q["programme"]
 
 
 def code_version() -> str:
