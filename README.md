@@ -70,6 +70,9 @@ uvicorn app.main:app --reload    # then POST /ask {"question": "...", "programme
 
 # check retrieval against the eval questions
 python scripts/check_retrieval.py
+
+# run the eval: every question through the agent, answers scored on key facts
+python scripts/run_eval.py --model qwen2.5:7b --variant agentic
 ```
 
 Ollama runs models with a 4096-token context window by default and silently cuts longer prompts, so the agent keeps the excerpts it sends under `MAX_CONTEXT_CHARS` (see `.env.example`).
@@ -85,13 +88,16 @@ app/
   ingest.py      PDFs + course CSVs → tagged chunks → Chroma
   retriever.py   hybrid search (embeddings + BM25), filtered by study plan
   agent.py       plan → retrieve → grade → retry → answer loop
+  scoring.py     eval scoring: key facts in answers, citations and context (pure, unit-tested)
   cli.py         command-line interface
   main.py        FastAPI server
 scripts/
   extract_tables.py   study plan PDFs → data/courses/*.csv
   check_retrieval.py  how often search finds the answer to each eval question
+  run_eval.py         eval questions through the agent, scored; one CSV per run
 tests/           unit tests (run in CI)
-eval/            evaluation questions with expected answers and sources
+eval/            evaluation questions with expected answers, key facts and sources;
+                 results/ holds each run's scores and a summary
 data/courses/    study plan course tables, extracted and hand-checked
 data/raw/        your documents (git-ignored)
 ```

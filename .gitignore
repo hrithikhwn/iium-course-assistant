@@ -225,6 +225,8 @@ __marimo__/
 # University documents and vector store: never commit
 data/raw/
 data/chroma/
+# excerpts each eval answer saw, kept for rescoring (document text)
+eval/results/*.jsonl
 
 # Editor backups
 *~

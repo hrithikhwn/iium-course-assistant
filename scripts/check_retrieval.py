@@ -10,15 +10,16 @@ For each question in eval/questions.csv that has a source_file, the question
 is searched as-is (or, with --planned, the way the agent's first search does it:
 the question plus the plan step's rewrite, fused; needs the LLM) and graded:
 
-  fact  one of the top-k chunks contains every key fact of the answer
+  fact  chunks from the expected file in the top k together contain every
+        key fact of the answer
   page  a chunk from the expected file and page is in the top k
   file  a chunk from the expected file is in the top k
   MISS  none of these
 
-Key facts come from an optional `key_facts` column (separated by ";"), or else
-from the course codes in the first sentence of `expected_answer`. Questions with neither are graded
-on page only, which is fine for long PDF text but too lenient for course
-tables, where one page holds many chunks.
+Key facts come from the `key_facts` column (format in app/scoring.py), or
+else from the course codes in the first sentence of `expected_answer`.
+Questions with neither are graded on page only, which is fine for long PDF
+text but too lenient for course tables, where one page holds many chunks.
 
 Questions tagged with a plan and programme are searched with that filter;
 'all' questions search everything. Needs Ollama running and
@@ -28,7 +29,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import re
 import sys
 from pathlib import Path
 
@@ -37,38 +37,24 @@ sys.path.insert(0, str(ROOT))
 
 from app.config import settings  # noqa: E402
 from app.retriever import ChromaRetriever  # noqa: E402
-from app.text import codes_in  # noqa: E402
-
-
-def key_facts(q: dict) -> list[str]:
-    if q.get("key_facts", "").strip():
-        return [f.strip() for f in q["key_facts"].split(";") if f.strip()]
-    # codes in the first sentence only: later sentences are notes, e.g. q12's
-    # "the plan's page 2 lists the code as BICS 4902"
-    first = re.split(r"(?<=[.!?])\s", q["expected_answer"].strip(), maxsplit=1)[0]
-    return codes_in(first)
-
-
-def has_facts(text: str, facts: list[str]) -> bool:
-    flat = " ".join(text.split()).lower()
-    return all(f.lower() in flat for f in facts)
+from app.scoring import question_facts, rank_covering  # noqa: E402
 
 
 def grade(q: dict, results) -> tuple[str, int | None]:
     """Best level reached, and the rank (1-based) where it was reached."""
     want_file, want_page = q["source_file"], int(q["page"]) if q["page"] else None
-    facts = key_facts(q)
-    levels = []
+    facts = question_facts(q)
     if facts:
-        levels.append(("fact", lambda c: c.source == want_file and has_facts(c.text, facts)))
-    else:
-        levels.append(("page", lambda c: c.source == want_file and (want_page is None or c.page == want_page)))
-    levels.append(("file", lambda c: c.source == want_file))
-    for name, ok in levels:
-        rank = next((i for i, c in enumerate(results, 1) if ok(c)), None)
+        rank = rank_covering(results, facts, source=want_file)
         if rank:
-            return name, rank
-    return "MISS", None
+            return "fact", rank
+    else:
+        rank = next((i for i, c in enumerate(results, 1)
+                     if c.source == want_file and (want_page is None or c.page == want_page)), None)
+        if rank:
+            return "page", rank
+    rank = next((i for i, c in enumerate(results, 1) if c.source == want_file), None)
+    return ("file", rank) if rank else ("MISS", None)
 
 
 def main() -> int:
@@ -108,9 +94,9 @@ def main() -> int:
             results = search(query, k=args.k, **kwargs)
         level, rank = grade(q, results)
         tally[level] += 1
-        facts = key_facts(q)
+        facts = question_facts(q)
         graded_on_facts += bool(facts)
-        needs = ", ".join(facts) if facts else f"p.{q['page']} of {q['source_file'][:22]}"
+        needs = ", ".join(alts[0] for alts in facts) if facts else f"p.{q['page']} of {q['source_file'][:22]}"
         top = results[0].citation() if results else "-"
         print(f"{q['id']:<5}{level:<6}{rank or '-':<6}{needs[:36]:<38}{top[:55]}")
         if planner:
