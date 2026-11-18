@@ -1,0 +1,9 @@
+﻿run,commit,model,variant,repeat,answers,errors,answerable,correct,false_refusals,supported,retrieved,should_refuse,refused,median_seconds,mean_llm_calls
+2026-11-18_1401_qwen2.5-7b_agentic,622bb99,qwen2.5:7b,agentic,2,80,0,70,51,4,54,64,10,10,23.9,3.9
+2026-11-18_1435_qwen2.5-7b_plain,622bb99,qwen2.5:7b,plain,2,80,0,70,50,6,49,60,10,10,5.9,1
+2026-11-18_1445_llama3.1-8b_agentic,622bb99,llama3.1:8b,agentic,2,80,0,70,55,0,53,66,10,8,27.6,3.3
+2026-11-18_1523_llama3.1-8b_plain,622bb99,llama3.1:8b,plain,2,80,0,70,47,6,51,60,10,10,7.6,1
+2026-11-18_1533_qwen2.5-3b_agentic,622bb99,qwen2.5:3b,agentic,2,80,0,70,51,4,27,68,10,10,12.4,4.0
+2026-11-18_1551_qwen2.5-3b_plain,622bb99,qwen2.5:3b,plain,2,80,0,70,44,8,31,60,10,10,3.5,1
+2026-11-18_1556_qwen2.5-7b_no-rewrite,622bb99,qwen2.5:7b,no-rewrite,2,80,0,70,51,4,56,64,10,10,20.6,3.0
+2026-11-18_1626_qwen2.5-7b_strict,622bb99,qwen2.5:7b,strict,2,80,0,70,34,28,35,64,10,10,18.4,3.5
