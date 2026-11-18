@@ -40,6 +40,15 @@ def folder_tags(folder: str) -> tuple[str, str]:
     return m.group(2), m.group(1).upper()
 
 
+def batch_of(batch: int | str) -> int:
+    """The batch as a number: 251, '251', or a matric number that starts
+    with it ('2510123')."""
+    digits = re.sub(r"\D", "", str(batch))
+    if len(digits) < 3:
+        raise ValueError(f"batch should look like 241, not '{batch}'")
+    return int(digits[:3])
+
+
 def plan_for(batch: int | str, programme: str) -> str:
     """Which study plan a student follows, from their batch (e.g. 251, or a
     matric number starting with it) and programme.
@@ -49,10 +58,7 @@ def plan_for(batch: int | str, programme: str) -> str:
     programme = programme.strip().upper()
     if programme not in PROGRAMMES:
         raise ValueError(f"programme must be BCS or BIT, not '{programme}'")
-    digits = re.sub(r"\D", "", str(batch))
-    if len(digits) < 3:
-        raise ValueError(f"batch should look like 241, not '{batch}'")
-    b = int(digits[:3])
+    b = batch_of(batch)
     if b < 201:
         raise ValueError(f"batch {b} is older than the 201 plan; no study plan for it")
     if b < 241:

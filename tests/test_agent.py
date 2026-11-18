@@ -11,9 +11,11 @@ class FakeLLM:
         self.grades = list(grades)
         self.reply = answer
         self.calls = []
+        self.users = []            # the user message of each call
 
     def chat(self, system, user, temperature=0.0):
         self.calls.append(system)
+        self.users.append(user)
         if system == PLAN_SYSTEM:
             return '{"query": "prerequisite rules"}'
         if system == GRADE_SYSTEM:
@@ -204,6 +206,18 @@ def test_question_comes_after_the_excerpts():
     msg = excerpts_then_question("When is FYP?", [Chunk("FYP rules", "plan.pdf", 1)])
     assert msg.startswith("Excerpts:\n[1] (plan.pdf, p.1)\nFYP rules")
     assert msg.endswith("\n\nQuestion: When is FYP?")
+
+
+def test_answer_step_is_told_the_students_study_plan():
+    """Some rules are given per study plan ("Batch 201: at least 130 ... Batch
+    241 and onwards: at least 125"). Not told that batch 211 follows the 201
+    plan, every model gave a batch 211 student the 241 rule (eval q24)."""
+    llm = FakeLLM(['{"sufficient": true, "reason": "ok"}'])
+    CourseAgent(llm, FakeRetriever()).run("How many credits to graduate?", batch="2110123", programme="bcs")
+    answer_msg = llm.users[llm.calls.index(ANSWER_SYSTEM)]
+    assert answer_msg.endswith("\n\nStudent: BCS batch 211, study plan Batch 201\n"
+                               "Question: How many credits to graduate?")
+    assert "Student:" not in llm.users[llm.calls.index(GRADE_SYSTEM)]    # the grade judges the excerpts only
 
 
 def test_rewrite_adds_to_the_questions_results_without_removing_any():

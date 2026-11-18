@@ -86,6 +86,12 @@ def test_plan_for_rejects_bad_input(batch, programme):
         plan_for(batch, programme)
 
 
+@pytest.mark.parametrize("batch, number", [(251, 251), ("251", 251), ("2510123", 251), (" batch 241", 241)])
+def test_batch_of(batch, number):
+    from app.text import batch_of
+    assert batch_of(batch) == number
+
+
 def test_plan_filter_includes_all_documents():
     assert plan_filter("241", "BCS") == {"$or": [
         {"$and": [{"plan": "241"}, {"programme": "BCS"}]},

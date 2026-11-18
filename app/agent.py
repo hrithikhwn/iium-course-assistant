@@ -13,8 +13,8 @@ from dataclasses import dataclass, field
 from .config import settings
 from .llm import LLM
 from .retriever import Retriever
-from .text import (Chunk, dedupe, drop_invented_codes, extract_json, fit_context, format_context,
-                   plan_for, renumber_citations, strip_marker)
+from .text import (Chunk, batch_of, dedupe, drop_invented_codes, extract_json, fit_context,
+                   format_context, plan_for, renumber_citations, strip_marker)
 
 ASK_STUDENT = "Which programme are you in (BCS or BIT), and what's your batch (e.g. 241)?"
 
@@ -65,18 +65,27 @@ NOT_FOUND = "NOT_FOUND"   # what the answer model replies when the excerpts don'
 # citation before the fact ("[3] You need...") 6/9 -> 0/9. Neither failure came
 # back with either wording, so text.renumber_citations and text.strip_marker are
 # what keep them from reaching the student.
+#
+# The study plan line: the documents give some rules per study plan, named after
+# its first batch ("Batch 201: at least 130 ... Batch 241 and onwards: at least
+# 125"). Asked by a batch 211 student, every model and variant in the first eval
+# gave the batch 241 rule (q24), as nothing said that 211 follows the 201 plan.
+# The agent already knows (plan_for), so the answer step is now told.
 ANSWER_SYSTEM = f"""You are an assistant for IIUM students. Answer the question ONLY from the numbered excerpts.
 - Write the answer in your own words in 1-3 sentences. Do not copy whole excerpts.
 - After each fact, put the number of its excerpt in brackets, like [2]: the number shown before the excerpt, never a section or page number from its text.
 - Course tables list each course as "- CODE Name: credit hours; prerequisite: ...". If the question is about a course, use its line.
+- The student's batch and study plan are given before the question. Where the excerpts give different rules for different batches or study plans, use the one for the student's study plan.
 - If none of the excerpts answer the question, reply with exactly {NOT_FOUND} and nothing else. Do not guess."""
 
 
-def excerpts_then_question(question: str, chunks: list[Chunk]) -> str:
+def excerpts_then_question(question: str, chunks: list[Chunk], student: str = "") -> str:
     """The user message for grade and answer. The question goes last: with it
     first, the 7B model answered from excerpt [1] even when the right course
-    line was excerpt [5] (0/3 correct); with it last, 3/3."""
-    return f"Excerpts:\n{format_context(chunks)}\n\nQuestion: {question}"
+    line was excerpt [5] (0/3 correct); with it last, 3/3. The answer step
+    also gets the student's study plan, just before the question."""
+    about = f"Student: {student}\n" if student else ""
+    return f"Excerpts:\n{format_context(chunks)}\n\n{about}Question: {question}"
 
 NOT_FOUND_MESSAGE = ("I couldn't find that in the official KICT and IIUM documents I have. "
                      "Please check with your academic advisor or the KICT academic office.")
@@ -154,8 +163,8 @@ class CourseAgent:
             found += self.retriever.search(q, k=self.top_k, plan=plan, programme=programme)
         return dedupe(found)
 
-    def answer(self, question: str, chunks: list[Chunk]) -> str:
-        user = excerpts_then_question(question, chunks)
+    def answer(self, question: str, chunks: list[Chunk], student: str = "") -> str:
+        user = excerpts_then_question(question, chunks, student)
         return self.llm.chat(ANSWER_SYSTEM, user, temperature=0.2)
 
     def run(self, question: str, batch: int | str | None = None, programme: str | None = None) -> Result:
@@ -216,7 +225,8 @@ class CourseAgent:
         if self.refuse_on_failed_grade and verdict and not verdict["sufficient"]:
             steps.append(Step("answer", "last grade not sufficient -> not found (strict)"))
             return self._not_found(steps, start, context)
-        reply = self.answer(question, context)
+        # in the documents' own words: "study plan Batch 201", not "plan 201"
+        reply = self.answer(question, context, f"{programme} batch {batch_of(batch)}, study plan Batch {plan}")
         # "" when the model says the excerpts don't answer it (or wrote nothing);
         # a NOT_FOUND it added after a real answer is cut off here
         text = strip_marker(reply, NOT_FOUND)

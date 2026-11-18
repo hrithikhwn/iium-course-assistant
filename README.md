@@ -13,7 +13,7 @@ Plain RAG retrieves once and hopes for the best. This agent:
 2. **Retrieves** — hybrid search (embeddings + BM25 keywords) over the student's own study plan and the university-wide rules
 3. **Grades** — asks the LLM whether the excerpts are actually enough
 4. **Retries** — if not, writes a new query and searches again (bounded loop)
-5. **Answers** — only from the excerpts, citing them as `[1]`, `[2]`, or says it couldn't find it. The sources list shows only the excerpts the answer cites, and a citation to an excerpt that doesn't exist is removed
+5. **Answers** — only from the excerpts, citing them as `[1]`, `[2]`, or says it couldn't find it. It is told the student's study plan (batch 211 follows study plan Batch 201), so where a rule differs by plan it uses the right one. The sources list shows only the excerpts the answer cites, and a citation to an excerpt that doesn't exist is removed
 
 ## Architecture
 
