@@ -373,11 +373,15 @@ def strip_marker(reply: str, marker: str) -> str:
     ("[2] NOT_FOUND"). The 7B model sometimes writes it after a real answer
     as well, judging the excerpts one by one ("... BIIT 2305. [7] NOT_FOUND");
     then the marker and the citation in front of it are removed and the answer
-    is kept. A reply with nothing but citations left counts as no answer."""
+    is kept. Anywhere else, inside a sentence, the marker is still the model's
+    verdict: llama3.1:8b writes "Unfortunately, NOT_FOUND", so that counts as
+    no answer too, as does a reply with nothing but citations left."""
     brackets = r"\[[^\]]*\]"
     head = re.sub(brackets, "", reply).lstrip(" \t\r\n.,;:*-\"'`")
     if head.upper().startswith(marker.upper()):
         return ""
     after_answer = rf"(?:(?<=[.!?\n\]])|^)\s*(?:{brackets}\s*)*{re.escape(marker)}\b[.!]?"
     text = re.sub(after_answer, "", reply, flags=re.IGNORECASE).strip()
+    if re.search(rf"\b{re.escape(marker)}\b", text, flags=re.IGNORECASE):
+        return ""          # still there, inside a sentence: "Unfortunately, NOT_FOUND"
     return text if re.search(r"\w", re.sub(brackets, "", text)) else ""

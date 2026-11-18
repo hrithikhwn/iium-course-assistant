@@ -129,7 +129,8 @@ def test_found_answer_keeps_sources():
     assert result.found and result.sources and result.answer.endswith("[1].")
 
 
-@pytest.mark.parametrize("reply", [NOT_FOUND, "not_found", f"  {NOT_FOUND}\n", f"[2] {NOT_FOUND}"])
+@pytest.mark.parametrize("reply", [NOT_FOUND, "not_found", f"  {NOT_FOUND}\n", f"[2] {NOT_FOUND}",
+                                   f"Unfortunately, {NOT_FOUND}"])
 def test_model_not_found_becomes_fixed_message_without_sources(reply):
     result = run_bcs(FakeLLM(['{"sufficient": true, "reason": "ok"}'], answer=reply), FakeRetriever())
     assert not result.found

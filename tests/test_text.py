@@ -285,6 +285,9 @@ from app.text import strip_marker  # noqa: E402
     "NOT_FOUND", "not_found", "  NOT_FOUND\n", "**NOT_FOUND**",
     "[2] NOT_FOUND",                                    # after a citation
     "NOT_FOUND. The excerpts only list 2025 fees.",     # starts with it: still no answer
+    "Unfortunately, NOT_FOUND", "Unfortunately, NOT_FOUND.",   # seen live: a lead-in first
+    "Sorry, but NOT_FOUND [2]",
+    "FYP I needs BIIT 1301 [3]. Hostel fees: NOT_FOUND.",     # inside a sentence, even after an answer
     "", "[3].",                                         # nothing but citations left
 ])
 def test_replies_that_mean_no_answer(reply):
