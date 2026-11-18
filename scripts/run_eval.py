@@ -2,7 +2,7 @@
 
     python scripts/run_eval.py                        # every question, model from .env
     python scripts/run_eval.py --model qwen2.5:3b     # another model at LLM_BASE_URL
-    python scripts/run_eval.py --variant no-rewrite   # skip the plan step's rewrite
+    python scripts/run_eval.py --variant plain        # or no-rewrite, strict (see VARIANTS)
     python scripts/run_eval.py --ids q02,q11 --repeat 3
     python scripts/run_eval.py --rescore eval/results/<run>.csv   # after editing key facts
 
@@ -45,15 +45,17 @@ from app.retriever import ChromaRetriever  # noqa: E402
 from app.scoring import score_answer, summarise  # noqa: E402
 from app.text import Chunk  # noqa: E402
 
-# CourseAgent settings for each variant. "plain" (one search of the question,
-# no plan, grade or retry) and "strict" (no answer when the last grade fails)
-# need two switches app/agent.py doesn't have yet; until it does, those
-# variants stop with a message.
+# The agent's switches for each variant, all set here so .env can't change what
+# a variant means (other settings, like TOP_K, still come from .env):
+#   agentic     plan (rewrite), retrieve, grade, retry, answer
+#   no-rewrite  the same, searching with the question only
+#   plain       plain RAG: one search with the question, then the answer
+#   strict      agentic, but "not found" when the last grade still fails
 VARIANTS = {
-    "agentic": {},
-    "no-rewrite": {"rewrite": False},
-    "plain": {"rewrite": False, "grading": False, "max_retries": 0},
-    "strict": {"refuse_on_failed_grade": True},
+    "agentic": {"rewrite": True, "grading": True, "refuse_on_failed_grade": False},
+    "no-rewrite": {"rewrite": False, "grading": True, "refuse_on_failed_grade": False},
+    "plain": {"rewrite": False, "grading": False, "refuse_on_failed_grade": False},
+    "strict": {"rewrite": True, "grading": True, "refuse_on_failed_grade": True},
 }
 FIELDS = ["id", "type", "repeat", "correct", "found", "missing", "supported", "retrieved", "cites_source",
           "seconds", "llm_calls", "context", "cited", "answer", "question", "trace", "error"]

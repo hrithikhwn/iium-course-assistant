@@ -281,3 +281,39 @@ def test_empty_reply_is_not_found():
     result = answer_with("")
     assert not result.found and result.answer == NOT_FOUND_MESSAGE
     assert result.steps[-1].detail == "empty reply from 2 excerpts"
+
+
+# ----------------------------------------------------- plain RAG and strict --
+
+def test_grading_off_is_plain_rag():
+    llm, ret = FakeLLM([]), FakeRetriever()
+    result = CourseAgent(llm, ret, rewrite=False, grading=False, max_retries=2).run(
+        "When is FYP?", batch=241, programme="BCS")
+    assert llm.calls == [ANSWER_SYSTEM]                       # one LLM call: the answer
+    assert ret.queries == ["When is FYP?"]                    # one search, no retries
+    assert [s.name for s in result.steps] == ["student", "plan", "retrieve", "grade", "answer"]
+    assert "off" in result.steps[3].detail
+    assert result.found and result.answer.endswith("[1].")
+
+
+def test_strict_says_not_found_when_the_last_grade_fails():
+    grades = ['{"sufficient": false, "next_query": "a"}', '{"sufficient": false, "next_query": "b"}']
+    llm = FakeLLM(grades)
+    result = CourseAgent(llm, FakeRetriever(), max_retries=1, refuse_on_failed_grade=True).run(
+        "When is FYP?", batch=241, programme="BCS")
+    assert not result.found and result.answer == NOT_FOUND_MESSAGE
+    assert ANSWER_SYSTEM not in llm.calls                     # the answer model isn't asked
+    assert len(result.context) == 3                           # question + rewrite, then the retry
+    assert "strict" in result.steps[-1].detail
+
+
+def test_strict_answers_when_the_grade_passes():
+    llm = FakeLLM(['{"sufficient": true, "reason": "ok"}'])
+    result = CourseAgent(llm, FakeRetriever(), refuse_on_failed_grade=True).run(
+        "When is FYP?", batch=241, programme="BCS")
+    assert result.found and llm.calls[-1] == ANSWER_SYSTEM
+
+
+def test_strict_mode_needs_grading():
+    with pytest.raises(ValueError):
+        CourseAgent(FakeLLM([]), FakeRetriever(), grading=False, refuse_on_failed_grade=True)

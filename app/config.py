@@ -54,6 +54,12 @@ class Settings:
     # with the question. Off = search the question only, one LLM call fewer. Both
     # found the answer for 13/13 eval questions, so the Phase 4 eval decides.
     query_rewrite: bool = field(default_factory=lambda: _bool("QUERY_REWRITE", True))
+    # grade step: the LLM checks whether the excerpts answer the question, and the
+    # agent searches again if not. Off = plain RAG: one search, then the answer.
+    grading: bool = field(default_factory=lambda: _bool("GRADING", True))
+    # strict: "not found" when the last grade still fails. Off by default because
+    # the grader rejected correct course tables in testing; Phase 4 measures both.
+    refuse_on_failed_grade: bool = field(default_factory=lambda: _bool("REFUSE_ON_FAILED_GRADE", False))
     max_retries: int = field(default_factory=lambda: _int("MAX_RETRIES", 2))
     # Most excerpt text sent to the LLM in one prompt. Ollama's default window is
     # 4096 tokens (~3.5 characters each) and longer prompts are cut silently,

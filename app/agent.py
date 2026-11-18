@@ -1,4 +1,10 @@
-"""The agentic RAG loop: plan -> retrieve -> grade -> (retry) -> answer."""
+"""The agentic RAG loop: plan -> retrieve -> grade -> (retry) -> answer.
+
+Three switches (see config.py), mainly for the Phase 4 eval: `rewrite` off
+skips the plan step's LLM call; `grading` off makes it plain RAG (one search,
+then the answer); `refuse_on_failed_grade` says "not found" when the last
+grade fails instead of letting the answer step decide.
+"""
 from __future__ import annotations
 
 import time
@@ -103,13 +109,19 @@ class Result:
 class CourseAgent:
     def __init__(self, llm: LLM, retriever: Retriever, top_k: int = settings.top_k,
                  max_retries: int = settings.max_retries, max_context_chars: int = settings.max_context_chars,
-                 rewrite: bool = settings.query_rewrite):
+                 rewrite: bool = settings.query_rewrite, grading: bool = settings.grading,
+                 refuse_on_failed_grade: bool = settings.refuse_on_failed_grade):
+        if refuse_on_failed_grade and not grading:
+            raise ValueError("refuse_on_failed_grade needs grading: without a grade there is nothing to refuse on")
         self.llm = llm
         self.retriever = retriever
         self.top_k = top_k
         self.max_retries = max_retries
         self.max_context_chars = max_context_chars   # excerpts sent to grade/answer, see text.fit_context
         self.rewrite = rewrite                       # False: no plan-step LLM call, search the question only
+        self.grading = grading                       # False: plain RAG, no grade step and no retries
+        # True: "not found" when the last grade still fails, without asking the answer model
+        self.refuse_on_failed_grade = refuse_on_failed_grade
 
     def plan(self, question: str) -> str:
         reply = extract_json(self.llm.chat(PLAN_SYSTEM, question))
@@ -170,6 +182,7 @@ class CourseAgent:
             steps.append(Step("plan", "rewrite off: searching the question only"))
 
         context: list[Chunk] = []
+        verdict: dict | None = None           # the last grade (None with grading off)
         tried = {query.lower(), question.strip().lower()}
         # first search: the student's own words, plus the rewrite if there is one
         queries = [question, query] if self.rewrite else [question]
@@ -182,6 +195,9 @@ class CourseAgent:
             steps.append(Step("retrieve", f"{len(found)} chunks for {searched} (plan {plan}, {programme}); "
                                           f"{len(context)} in context"))
 
+            if not self.grading:              # plain RAG: answer from this one search
+                steps.append(Step("grade", "grading off: answering from the first search"))
+                break
             verdict = self.grade(question, context)
             steps.append(Step("grade", f"sufficient={verdict['sufficient']} — {verdict['reason']}"))
 
@@ -196,6 +212,9 @@ class CourseAgent:
         # 3. Answer only from what was found, or say so.
         if not context:                                   # nothing retrieved: don't ask the LLM at all
             steps.append(Step("answer", "no excerpts found -> not found"))
+            return self._not_found(steps, start, context)
+        if self.refuse_on_failed_grade and verdict and not verdict["sufficient"]:
+            steps.append(Step("answer", "last grade not sufficient -> not found (strict)"))
             return self._not_found(steps, start, context)
         reply = self.answer(question, context)
         # "" when the model says the excerpts don't answer it (or wrote nothing);

@@ -72,6 +72,7 @@ uvicorn app.main:app --reload    # then POST /ask {"question": "...", "programme
 python scripts/check_retrieval.py
 
 # run the eval: every question through the agent, answers scored on key facts
+# (variants: agentic, no-rewrite, plain = plain RAG, strict)
 python scripts/run_eval.py --model qwen2.5:7b --variant agentic
 ```
 
