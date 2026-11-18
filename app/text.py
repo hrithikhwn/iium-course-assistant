@@ -1,5 +1,5 @@
-"""Pure helpers: chunking, batch tags, course tables, JSON extraction,
-context formatting, citations.
+"""Pure helpers: chunking, batch tags, course tables, semester plans, JSON
+extraction, context formatting, citations.
 
 No network or database access here, so everything is easy to unit-test.
 """
@@ -216,38 +216,84 @@ def matches_filter(meta: dict, plan: str | None, programme: str | None) -> bool:
 
 # --------------------------------------------------------- course tables --
 
-def course_line(row: dict) -> str:
-    """One CSV row as a sentence the embedder and the LLM can both read."""
+# "Field Electives: Data Analytics (Core)": the plans list each elective
+# track's core and non-core courses as two tables
+TRACK_PART_RE = re.compile(r"\s*\((core|non-core)\)$", re.I)
+
+
+def course_line(row: dict, part: str = "") -> str:
+    """One CSV row as a sentence the embedder and the LLM can both read.
+    `part` is the course's place in its elective track: core or non-core."""
     code = f"{row['course_code']} " if row.get("course_code") else ""
-    parts = [f"- {code}{row['course_name']}: {row['credit_hours'] or '?'} credit hours",
+    name = f"{row['course_name']} ({part})" if part else row["course_name"]
+    parts = [f"- {code}{name}: {row['credit_hours'] or '?'} credit hours",
              f"prerequisite: {row.get('prerequisite') or 'none'}"]
     if row.get("offering_dept"):
         parts.append(f"offered by {row['offering_dept']}")
     return "; ".join(parts)
 
 
+def pack_lines(header: str, lines: list[str], size: int) -> list[str]:
+    """The lines in texts of at most `size` characters, each starting with
+    the header so it makes sense on its own."""
+    texts: list[str] = []
+    body: list[str] = []
+    for line in lines:
+        if body and len(header) + sum(len(l) + 1 for l in body) + len(line) + 1 > size:
+            texts.append("\n".join([header, *body]))
+            body = []
+        body.append(line)
+    texts.append("\n".join([header, *body]))
+    return texts
+
+
 def course_chunks(rows: list[dict], source: str, size: int = 900) -> list[Chunk]:
     """Turn a plan's course CSV rows into chunks: one or more per category
-    and page, each starting with a header so it makes sense on its own."""
-    chunks: list[Chunk] = []
-    groups: list[tuple[tuple, list[dict]]] = []
-    for row in rows:
-        key = (row["plan"], row["programme"], row["category"], int(row["page"]))
-        if groups and groups[-1][0] == key:
-            groups[-1][1].append(row)
-        else:
-            groups.append((key, [row]))
+    and page, each starting with a header so it makes sense on its own.
 
-    for (plan, programme, category, page), group in groups:
-        header = f"{programme} study plan {plan}, {category}:"
-        body: list[str] = []
-        for line in map(course_line, group):
-            if body and len(header) + sum(len(l) + 1 for l in body) + len(line) + 1 > size:
-                chunks.append(Chunk("\n".join([header, *body]), source, page, plan, programme))
-                body = []
-            body.append(line)
-        chunks.append(Chunk("\n".join([header, *body]), source, page, plan, programme))
-    return chunks
+    An elective track's core and non-core tables share a chunk, each course
+    marked (core) or (non-core). Kept apart, the short non-core table ranked
+    above the core one for "which courses are core in the AI track?", in
+    keyword and embedding search alike."""
+    groups: list[tuple[tuple, list[str]]] = []
+    for row in rows:
+        m = TRACK_PART_RE.search(row["category"])
+        category = row["category"][:m.start()] if m else row["category"]
+        line = course_line(row, m.group(1).lower() if m else "")
+        key = (row["plan"], row["programme"], category, int(row["page"]))
+        if groups and groups[-1][0] == key:
+            groups[-1][1].append(line)
+        else:
+            groups.append((key, [line]))
+    return [Chunk(text, source, page, plan, programme)
+            for (plan, programme, category, page), lines in groups
+            for text in pack_lines(f"{programme} study plan {plan}, {category}:", lines, size)]
+
+
+# -------------------------------------------------------- semester plans --
+
+def semester_line(row: dict) -> str:
+    """One row of a plan's semester-by-semester page: a course, an elective
+    slot ('Field Elective I') or a total."""
+    code = f"{row['course_code']} " if row.get("course_code") else ""
+    line = f"- {code}{row['course_name']}: {row['credit_hours'] or '?'} credit hours"
+    return f"{line}; prerequisite: {row['prerequisite']}" if row.get("prerequisite") else line
+
+
+def semester_chunks(rows: list[dict], source: str, size: int = 900) -> list[Chunk]:
+    """A plan's semester-by-semester rows as chunks, one per semester. The
+    PDF puts two semesters side by side and its text reads straight across
+    both, so the page is indexed from these rows instead. Rows without a year
+    and semester (the total graduating credits) get a chunk of their own."""
+    groups: dict[tuple, list[str]] = {}
+    for row in rows:
+        key = (row["plan"], row["programme"], row["year"], row["semester"], int(row["page"]))
+        groups.setdefault(key, []).append(semester_line(row))
+    return [Chunk(text, source, page, plan, programme)
+            for (plan, programme, year, semester, page), lines in groups.items()
+            for text in pack_lines(f"{programme} study plan {plan}, "
+                                   + (f"Year {year} Semester {semester} courses:" if year
+                                      else "total graduating credits:"), lines, size)]
 
 
 def normalize(text: str) -> str:

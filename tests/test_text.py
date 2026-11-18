@@ -138,6 +138,60 @@ def test_course_chunks_split_long_categories_and_repeat_header():
     assert sum(c.text.count("\n- ") for c in chunks) == 30
 
 
+def test_course_line_marks_a_track_course_core_or_not():
+    assert course_line(row("BICS 4340", "Machine Learning", prereq="BICS 2303"), "core") == \
+        "- BICS 4340 Machine Learning (core): 3 credit hours; prerequisite: BICS 2303; offered by DCS"
+
+
+def test_course_chunks_keep_an_elective_track_together():
+    """Apart, the short non-core table outranked the core one for 'which
+    courses are core in the AI track?' (eval q27)."""
+    ai, idex = "Field Electives: Artificial Intelligence", "Field Electives: Innovative Digital Experience (IDEx)"
+    rows = [row("BICS 4340", "Machine Learning", page="2", category=f"{ai} (Core)"),
+            row("BICS 4341", "Natural Language Processing", page="2", category=f"{ai} (Core)"),
+            row("BICS 4344", "Bio-inspired Computing", page="2", category=f"{ai} (Non-core)"),
+            row("BIIT 4350", "Game Design", page="2", category=f"{idex} (Core)")]
+    chunks = course_chunks(rows, "plan.pdf")
+    assert [c.text.splitlines()[0] for c in chunks] == [
+        "BCS study plan 241, Field Electives: Artificial Intelligence:",
+        "BCS study plan 241, Field Electives: Innovative Digital Experience (IDEx):"]
+    assert "- BICS 4341 Natural Language Processing (core):" in chunks[0].text
+    assert "- BICS 4344 Bio-inspired Computing (non-core):" in chunks[0].text
+
+
+# -------------------------------------------------------- semester plans --
+
+from app.text import semester_chunks, semester_line  # noqa: E402
+
+
+def srow(year, semester, code, name, credits="3", prereq="", page="3"):
+    return {"plan": "241", "programme": "BCS", "year": year, "semester": semester, "course_code": code,
+            "course_name": name, "credit_hours": credits, "prerequisite": prereq, "page": page}
+
+
+def test_semester_line():
+    assert semester_line(srow("2", "2", "BICS 2305", "Operating Systems", prereq="BICS 1302")) == \
+        "- BICS 2305 Operating Systems: 3 credit hours; prerequisite: BICS 1302"
+    assert semester_line(srow("2", "2", "", "Total Credits (Local/International)", credits="20")) == \
+        "- Total Credits (Local/International): 20 credit hours"
+
+
+def test_semester_chunks_one_per_semester_and_one_for_graduating_credits():
+    rows = [srow("2", "1", "BICS 2301", "Enterprise Networks"),
+            srow("2", "2", "BICS 2305", "Operating Systems"),
+            srow("2", "2", "BICS/BIIT XXXX", "Field Elective I", prereq="Course Specific"),
+            srow("", "", "", "Total Graduating Credits (Local Students)", credits="125")]
+    chunks = semester_chunks(rows, "plan.pdf")
+    assert [c.text.splitlines()[0] for c in chunks] == [
+        "BCS study plan 241, Year 2 Semester 1 courses:",
+        "BCS study plan 241, Year 2 Semester 2 courses:",
+        "BCS study plan 241, total graduating credits:"]
+    assert chunks[1].text.splitlines()[1:] == [
+        "- BICS 2305 Operating Systems: 3 credit hours",
+        "- BICS/BIIT XXXX Field Elective I: 3 credit hours; prerequisite: Course Specific"]
+    assert all((c.source, c.page, c.plan, c.programme) == ("plan.pdf", 3, "241", "BCS") for c in chunks)
+
+
 # ---------------------------------------------------------- keyword search --
 
 from app.text import BM25, codes_in, matches_filter, rrf, singular, tokenize  # noqa: E402

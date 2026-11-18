@@ -27,7 +27,7 @@ flowchart LR
     A --> OUT[Answer + cited sources]
 
     subgraph Ingest [Offline ingest]
-        D[PDFs in data/raw/&lt;folder&gt;<br/>course tables in data/courses] --> C[Chunk + page, plan, programme]
+        D[PDFs in data/raw/&lt;folder&gt;<br/>study plan tables in data/courses] --> C[Chunk + page, plan, programme]
         C --> E[Embed<br/>nomic-embed-text]
         E --> V[(Chroma vector store)]
     end
@@ -59,7 +59,8 @@ cp .env.example .env
 
 # 3. Download the documents listed in sources.md into the folder shown for each
 #    (data/raw/all/, data/raw/bcs-241/, ...). The folder says which students a
-#    document applies to. Study plan course tables come from data/courses/*.csv.
+#    document applies to. Study plan course tables and semester plans come from
+#    data/courses/*.csv.
 python -m app.ingest
 
 # 4. Ask (programme and batch pick the right study plan)
@@ -86,20 +87,21 @@ app/
   llm.py         swappable OpenAI-compatible LLM client
   embeddings.py  Ollama embeddings
   text.py        chunking, batch → study plan, keyword search, JSON parsing, citations (pure, unit-tested)
-  ingest.py      PDFs + course CSVs → tagged chunks → Chroma
+  ingest.py      PDFs + study plan CSVs → tagged chunks → Chroma
   retriever.py   hybrid search (embeddings + BM25), filtered by study plan
   agent.py       plan → retrieve → grade → retry → answer loop
   scoring.py     eval scoring: key facts in answers, citations and context (pure, unit-tested)
   cli.py         command-line interface
   main.py        FastAPI server
 scripts/
-  extract_tables.py   study plan PDFs → data/courses/*.csv
-  check_retrieval.py  how often search finds the answer to each eval question
-  run_eval.py         eval questions through the agent, scored; one CSV per run
+  extract_tables.py     study plan course tables → data/courses/<plan>.csv
+  extract_semesters.py  study plan semester pages → data/courses/<plan>-semesters.csv
+  check_retrieval.py    how often search finds the answer to each eval question
+  run_eval.py           eval questions through the agent, scored; one CSV per run
 tests/           unit tests (run in CI)
 eval/            evaluation questions with expected answers, key facts and sources;
                  results/ holds each run's scores and a summary
-data/courses/    study plan course tables, extracted and hand-checked
+data/courses/    study plan course tables and semester plans, extracted and hand-checked
 data/raw/        your documents (git-ignored)
 ```
 

@@ -1,0 +1,64 @@
+plan,programme,year,semester,course_code,course_name,credit_hours,prerequisite,page
+241,BIT,1,1,BIIT 1301,Database Programming,3,,3
+241,BIT,1,1,BICS 1305,Discrete Structures,3,,3
+241,BIT,1,1,BICS 1301,Elements of Programming,3,,3
+241,BIT,1,1,BICS 1302,Introduction to Computer Organisation,3,,3
+241,BIT,1,1,UNGS 1301,Basic Philosophy and Islamic Worldview,3,,3
+241,BIT,1,1,TQTD 1002,Tilawah Al-Quran 1,0.5,,3
+241,BIT,1,1,CCUB 1061,Usrah 1,0.5,,3
+241,BIT,1,1,SCSH 1201,"Sustainable Development Issues, Principles and Practices",2,,3
+241,BIT,1,1,CCSS 1020/CCSS 2010/CCSS 3010,Skills 1,0.5,,3
+241,BIT,1,1,LMBD 1131,Bahasa Melayu I (International Only),1,,3
+241,BIT,1,1,,Total Credits (Local Students),18.5,,3
+241,BIT,1,1,,Total Credits (International Students),19.5,,3
+241,BIT,1,2,BIIT 1303,System Analysis and Design,3,BICS 1301,3
+241,BIT,1,2,BICS 1303,Computer Networking,3,BICS 1302,3
+241,BIT,1,2,BICS 1304,Object-Oriented Programming,3,BICS 1301,3
+241,BIT,1,2,BIIT 1302,Organisational Informatics,3,,3
+241,BIT,1,2,UNGS 2290,Knowledge & Civilization in Islam,2,UNGS 1301,3
+241,BIT,1,2,TQTD 2002,Tilawah Al-Quran 2,0.5,TQTD 1002,3
+241,BIT,1,2,CCUB 1062,Usrah 2,0.5,CCUB 1061,3
+241,BIT,1,2,LMBD 1132,Bahasa Melayu II (International Only),1,LMBD 1131,3
+241,BIT,1,2,LM 2026,Bahasa Melayu Kerjaya (Malaysian Only),2,,3
+241,BIT,1,2,,Free Elective 1,3,Course Specific,3
+241,BIT,1,2,,Total Credits (Local Students),20,,3
+241,BIT,1,2,,Total Credits (International Students),19,,3
+241,BIT,2,1,BIIT 2301,User Experience Design,3,BIIT 1303,3
+241,BIT,2,1,BIIT 2302,Management of Information Security,3,BIIT 1302,3
+241,BIT,2,1,BIIT 2303,Network Infrastructure Management,3,BICS 1303,3
+241,BIT,2,1,BIIT 2304,Technopreneurship,3,2nd Year,3
+241,BIT,2,1,BICS 2305,Operating Systems,3,BICS 1302,3
+241,BIT,2,1,,Free Elective II,3,Course Specific,3
+241,BIT,2,1,SCSH 2163,Usrah in Action 1 (SD: Community Profiling),1,SCSH 1201,3
+241,BIT,2,1,LQAD 1003,Arabic for Ibadah 1,0.5,,3
+241,BIT,2,1,CCLM 2051,Leadership,0.5,,3
+241,BIT,2,1,,Total Credits (Local/International),20,,3
+241,BIT,2,2,BIIT 2305,Web Application Development,3,BICS 1304 and BIIT 2301,3
+241,BIT,2,2,BICS 2303,Intelligent Systems,3,BICS 1305,3
+241,BIT,2,2,BICS/BIIT XXXX,Field Elective I,3,Course Specific,3
+241,BIT,2,2,BICS/BIIT XXXX,Field Elective II,3,Course Specific,3
+241,BIT,2,2,UNGS 2380,Ethics and Fiqh of Contemporary Issues,3,UNGS 2290,3
+241,BIT,2,2,SCSH 3164,Usrah in Action 2,1,SCSH 2163,3
+241,BIT,2,2,LEED 1301,English for Academic Writing,3,,3
+241,BIT,2,2,LQAD 2003,Arabic for Ibadah 2,0.5,LQAD 1003,3
+241,BIT,2,2,CCSS 1020/CCSS 2010/CCSS 3010,Skills 2,0.5,,3
+241,BIT,2,2,,Total Credits (Local/International),20,,3
+241,BIT,3,1,BIIT 3301,Cloud Computing,3,BIIT 2305,3
+241,BIT,3,1,BIIT 3302,Mobile Application Development,3,BIIT 2305,3
+241,BIT,3,1,BICS/BIIT XXXX,Field Elective III,3,Course Specific,3
+241,BIT,3,1,BICS/BIIT XXXX,Field Elective IV,3,Course Specific,3
+241,BIT,3,1,,Free Elective III,3,Course Specific,3
+241,BIT,3,1,BIIT 4321,Final Year Project I,3,"BIIT 1301, BIIT 2303, BIIT 2305",3
+241,BIT,3,1,,Total Credits (Local/International),18,,3
+241,BIT,3,2,BIIT 3303,Cyber Law and Ethics,3,BIIT 2305,3
+241,BIT,3,2,BIIT 3304,ICT and Islam,3,3rd Year,3
+241,BIT,3,2,BICS/BIIT XXXX,Field Elective V,3,Course Specific,3
+241,BIT,3,2,BICS/BIIT XXXX,Field Elective VI,3,Course Specific,3
+241,BIT,3,2,,Free Elective IV,3,Course Specific,3
+241,BIT,3,2,BIIT 4421,Final Year Project II,4,BIIT 4321,3
+241,BIT,3,2,CCFM 2061,Family Management,0.5,,3
+241,BIT,3,2,,Total Credits (Local/International),19.5,,3
+241,BIT,4,1,BIIT 4901,Industrial Attachment,9,Passed All Courses,3
+241,BIT,4,1,,Total Credits (Local/International),9,,3
+241,BIT,,,,Total Graduating Credits (Local Students),125,,3
+241,BIT,,,,Total Graduating Credits (International Students),125,,3

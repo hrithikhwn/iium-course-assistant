@@ -1,0 +1,62 @@
+plan,programme,year,semester,course_code,course_name,credit_hours,prerequisite,page
+261,BIT,1,1,MPUG 3122,Falsafah dan Cabaran Semasa (Malaysian),2,,2
+261,BIT,1,1,UNGS 3122,Philosophy and Contemporary Challenges (International),2,,2
+261,BIT,1,1,TQTD 1002,Tilawah Al-Quran 1,0.5,,2
+261,BIT,1,1,CCUB 1000,Usrah,1,,2
+261,BIT,1,1,UNGS 1213,Tawhidic Epistemelogy and Islamic Worldview,2,,2
+261,BIT,1,1,LQAD 1113,Arabic for Understanding Ibadah I,1,,2
+261,BIT,1,1,LQAD 1131,Arabic for Effective Communication I,1,,2
+261,BIT,1,1,BIIT 1301,Database Programming,3,,2
+261,BIT,1,1,BICS 1301,Elements of Programming,3,,2
+261,BIT,1,1,BICS 1302,Introduction to Computer Organisation,3,,2
+261,BIT,1,1,BICS 1305,Discrete Structures,3,,2
+261,BIT,1,1,,Total Credits (Muslim),18.5,,2
+261,BIT,1,1,,Total Credits (Non-Muslim),18,,2
+261,BIT,1,2,LMBD 3204,Bahasa Melayu Kerjaya (Science and Tech) (Malaysian),2,,2
+261,BIT,1,2,MPUG 3152,"Bahasa Melayu Komunikasi (Nusantara) (Indonesia, Singapore, Brunei)",2,,2
+261,BIT,1,2,MPUG 3162,Bahasa Melayu Komunikasi (Other International),2,,2
+261,BIT,1,2,TQTD 2002,Tilawah Al-Quran 2,0.5,TQTD 1002,2
+261,BIT,1,2,LQAD 2232,Arabic for Understanding Ibadah II (Muslim),1,LQAD 1113/LQAD 1131,2
+261,BIT,1,2,LQAD 2132,Arabic for Effective Communication II (Non-Muslim),2,LQAD 1113/LQAD 1131,2
+261,BIT,1,2,LEED 1301,Academic English for Sustainability,2,CELPAD,2
+261,BIT,1,2,MPUG 3112,Aspirasi Negara Bangsa (Malaysian),2,,2
+261,BIT,1,2,MPUG 3142,Malaysian Citra (International),2,,2
+261,BIT,1,2,BIIT 1302,Organisational Informatics,3,,2
+261,BIT,1,2,BIIT 1303,System Analysis and Design,3,BICS 1301,2
+261,BIT,1,2,BICS 1303,Computer Networking,3,BICS 1302,2
+261,BIT,1,2,BICS 1304,Object-Oriented Programming,3,BICS 1301,2
+261,BIT,1,2,,Total Credits (Muslim),19.5,,2
+261,BIT,1,2,,Total Credits (Non-Muslim),20,,2
+261,BIT,2,1,BIIT 2301,User Experience Design,3,BIIT 1303,2
+261,BIT,2,1,BIIT 2302,Management of Information Security,3,BIIT 1302,2
+261,BIT,2,1,BIIT 2303,Network Infrastructure Management,3,BICS 1303,2
+261,BIT,2,1,BIIT 2304,Technopreneurship,3,2nd Year,2
+261,BIT,2,1,BICS 2305,Operating Systems,3,BICS 1302,2
+261,BIT,2,1,,Free Elective I,3,Course Specific,2
+261,BIT,2,1,,Total Credits,18,,2
+261,BIT,2,2,CCSS 3000,Skill,1,,2
+261,BIT,2,2,BIIT 2305,Web Application Development,3,BICS 1304 and BIIT 2301,2
+261,BIT,2,2,BICS 2303,Intelligent Systems,3,BICS 1305,2
+261,BIT,2,2,BICS/BIIT XXXX,Field Elective I,3,Course Specific,2
+261,BIT,2,2,BICS/BIIT XXXX,Field Elective II,3,Course Specific,2
+261,BIT,2,2,BICS/BIIT XXXX,Field Elective III,3,Course Specific,2
+261,BIT,2,2,,Free Elective II,3,Course Specific,2
+261,BIT,2,2,,Total Credits,19,,2
+261,BIT,3,1,MOUG 3132,Integrity and Anti-Corruption,2,,2
+261,BIT,3,1,BIIT 3301,Cloud Computing,3,BIIT 2305,2
+261,BIT,3,1,BIIT 3302,Mobile Application Development,3,BIIT 2305,2
+261,BIT,3,1,BICS/BIIT XXXX,Field Elective IV,3,Course Specific,2
+261,BIT,3,1,BICS/BIIT XXXX,Field Elective V,3,Course Specific,2
+261,BIT,3,1,BIIT 4321,Final Year Project I,3,"BIIT 1301, BIIT 2303, BIIT 2305",2
+261,BIT,3,1,,Free Elective III,3,Course Specific,2
+261,BIT,3,1,,Total Credits,20,,2
+261,BIT,3,2,CCLF 2000,Leadership and Family Management,1,,2
+261,BIT,3,2,BIIT 3303,Cyber Law and Ethics,3,BIIT 2305,2
+261,BIT,3,2,BIIT 3304,ICT and Islam,3,3rd Year,2
+261,BIT,3,2,BICS/BIIT XXXX,Field Elective VI,3,Course Specific,2
+261,BIT,3,2,,Free Elective IV,3,Course Specific,2
+261,BIT,3,2,BIIT 4421,Final Year Project II,4,BIIT 4321,2
+261,BIT,3,2,,Total Credits,17,,2
+261,BIT,4,1,BICS 4902,Industrial Attachment,11,Finish Courses,2
+261,BIT,4,1,,Total Credits,11,,2
+261,BIT,,,,Total Graduating Credits,123,,2

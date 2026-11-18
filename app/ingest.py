@@ -17,14 +17,15 @@ import hashlib
 from pathlib import Path
 
 from .config import settings
-from .text import Chunk, chunk_text, course_chunks, folder_tags
+from .text import Chunk, chunk_text, course_chunks, folder_tags, semester_chunks
 
 SUPPORTED = {".pdf", ".txt", ".md"}
 
-# Study plans whose course tables were extracted to data/courses/<folder>.csv
-# (scripts/extract_tables.py). pypdf scrambles those tables, so their pages
-# are indexed from the hand-checked CSV; the plan's other pages (the
-# semester-by-semester plan) are still indexed from the PDF text.
+# Study plans whose tables were extracted to hand-checked CSVs: the course
+# tables to data/courses/<folder>.csv (scripts/extract_tables.py), the
+# semester-by-semester plan to data/courses/<folder>-semesters.csv
+# (scripts/extract_semesters.py). pypdf scrambles those tables, so their
+# pages are indexed from the CSVs; any other page from the PDF text.
 STUDY_PLANS = {
     "bcs-201": "STUDY PLAN FOR BCS BATCH 201.pdf",
     "bit-201": "STUDY PLAN FOR BIT BATCH 201.pdf",
@@ -35,6 +36,8 @@ STUDY_PLANS = {
 
 CSV_COLUMNS = {"plan", "programme", "category", "course_code", "course_name",
                "credit_hours", "prerequisite", "offering_dept", "page"}
+SEMESTER_COLUMNS = {"plan", "programme", "year", "semester", "course_code", "course_name",
+                    "credit_hours", "prerequisite", "page"}
 
 
 def load_file(path: Path) -> list[tuple[str, int | None]]:
@@ -47,19 +50,18 @@ def load_file(path: Path) -> list[tuple[str, int | None]]:
     return [(path.read_text(encoding="utf-8", errors="ignore"), None)]
 
 
-def load_course_csv(folder: str, courses_dir: Path) -> list[dict] | None:
-    """Rows of data/courses/<folder>.csv, checked, or None if there is no CSV.
+def read_plan_csv(path: Path, columns: set[str], folder: str, script: str) -> list[dict] | None:
+    """Rows of one of a study plan's CSVs, checked, or None if there is no CSV.
 
     utf-8-sig: Excel adds a byte-order mark when it saves a CSV as UTF-8,
     which would otherwise turn the first column name into '\\ufeffplan'."""
-    path = courses_dir / f"{folder}.csv"
     if not path.exists():
         return None
     with path.open(encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
-        missing = CSV_COLUMNS - set(reader.fieldnames or [])
+        missing = columns - set(reader.fieldnames or [])
         if missing:
-            raise SystemExit(f"{path}: missing columns {sorted(missing)} (re-run scripts/extract_tables.py)")
+            raise SystemExit(f"{path}: missing columns {sorted(missing)} (re-run scripts/{script})")
         rows = list(reader)
 
     plan, programme = folder_tags(folder)
@@ -69,6 +71,25 @@ def load_course_csv(folder: str, courses_dir: Path) -> list[dict] | None:
                              f"doesn't match its folder {folder} ({plan}/{programme})")
         if not r["page"].strip().isdigit():
             raise SystemExit(f"{path} line {line}: page must be a page number, not {r['page']!r}")
+    return rows
+
+
+def load_course_csv(folder: str, courses_dir: Path) -> list[dict] | None:
+    """Rows of data/courses/<folder>.csv, the plan's course tables."""
+    return read_plan_csv(courses_dir / f"{folder}.csv", CSV_COLUMNS, folder, "extract_tables.py")
+
+
+def load_semester_csv(folder: str, courses_dir: Path) -> list[dict] | None:
+    """Rows of data/courses/<folder>-semesters.csv, the plan's semester-by-semester
+    page. Year and semester are both numbers, or both empty on the rows for the
+    total graduating credits."""
+    path = courses_dir / f"{folder}-semesters.csv"
+    rows = read_plan_csv(path, SEMESTER_COLUMNS, folder, "extract_semesters.py")
+    for line, r in enumerate(rows or [], 2):
+        year, semester = r["year"].strip(), r["semester"].strip()
+        if not (year.isdigit() and semester.isdigit()) and (year or semester):
+            raise SystemExit(f"{path} line {line}: year and semester must both be numbers or both be "
+                             f"empty, not {year!r}/{semester!r}")
     return rows
 
 
@@ -87,13 +108,20 @@ def build_chunks(raw_dir: Path, courses_dir: Path | None = None) -> list[Chunk]:
         covered: set[int] = set()
         note = ""
         if STUDY_PLANS.get(folder) == path.name:
+            found = []
             rows = load_course_csv(folder, courses_dir)
             if rows is None:
-                note = f" (no {folder}.csv in {courses_dir}, using PDF text for course tables)"
+                found.append(f"no {folder}.csv in {courses_dir}, using PDF text for course tables")
             else:
                 chunks.extend(course_chunks(rows, path.name, settings.chunk_size))
-                covered = {int(r["page"]) for r in rows}
-                note = f" ({len(rows)} courses from {folder}.csv, pages {sorted(covered)})"
+                covered |= {int(r["page"]) for r in rows}
+                found.append(f"{len(rows)} courses from {folder}.csv")
+            semesters = load_semester_csv(folder, courses_dir)
+            if semesters is not None:
+                chunks.extend(semester_chunks(semesters, path.name, settings.chunk_size))
+                covered |= {int(r["page"]) for r in semesters}
+                found.append(f"{len(semesters)} semester plan rows from {folder}-semesters.csv")
+            note = f" ({', '.join(found)}" + (f", pages {sorted(covered)})" if covered else ")")
 
         for text, page in load_file(path):
             if page in covered:
@@ -105,7 +133,7 @@ def build_chunks(raw_dir: Path, courses_dir: Path | None = None) -> list[Chunk]:
     # a renamed study plan PDF would silently lose its CSV: say so
     for folder, name in STUDY_PLANS.items():
         if (raw_dir / folder).is_dir() and not (raw_dir / folder / name).is_file():
-            print(f"  warning: {folder}/{name} not found, so {folder}.csv is not used "
+            print(f"  warning: {folder}/{name} not found, so its CSVs in data/courses are not used "
                   f"(update STUDY_PLANS in app/ingest.py if the file was renamed)")
     return chunks
 

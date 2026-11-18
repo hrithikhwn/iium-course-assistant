@@ -1,5 +1,6 @@
 """Ingest and retriever tests with temporary folders and fakes — no Ollama or Chroma needed."""
 import csv
+from pathlib import Path
 
 import pytest
 
@@ -221,11 +222,66 @@ def test_csv_missing_a_column_is_reported(docs):
         ingest.build_chunks(raw, courses)
 
 
+def write_semesters(courses):
+    write_csv(courses / "bcs-241-semesters.csv", [
+        {"plan": "241", "programme": "BCS", "year": "1", "semester": "1", "course_code": "BICS 1301",
+         "course_name": "Elements of Programming", "credit_hours": "3", "prerequisite": "", "page": "3"},
+        {"plan": "241", "programme": "BCS", "year": "", "semester": "", "course_code": "",
+         "course_name": "Total Graduating Credits (Local Students)", "credit_hours": "125",
+         "prerequisite": "", "page": "3"}])
+
+
+def test_semester_page_comes_from_its_csv(docs):
+    raw, courses = docs
+    write_semesters(courses)
+    plan = [c for c in ingest.build_chunks(raw, courses) if c.source == "plan.pdf"]
+    texts = [(c.page, c.text) for c in plan]
+    assert (3, "BCS study plan 241, Year 1 Semester 1 courses:\n"
+               "- BICS 1301 Elements of Programming: 3 credit hours") in texts
+    assert (3, "BCS study plan 241, total graduating credits:\n"
+               "- Total Graduating Credits (Local Students): 125 credit hours") in texts
+    assert (3, "YEAR 1 SEMESTER 1 BICS 1301") not in texts      # page 3's PDF text replaced
+    assert any(page == 1 for page, _ in texts)                   # the course CSV still used
+
+
+@pytest.mark.parametrize("year, semester", [("1", ""), ("", "2"), ("one", "1")])
+def test_semester_csv_needs_both_year_and_semester_or_neither(docs, year, semester):
+    raw, courses = docs
+    write_semesters(courses)
+    path = courses / "bcs-241-semesters.csv"
+    with path.open(encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    rows[0].update(year=year, semester=semester)
+    write_csv(path, rows)
+    with pytest.raises(SystemExit, match="year and semester"):
+        ingest.build_chunks(raw, courses)
+
+
+def test_semester_csv_missing_a_column_names_its_script(docs):
+    raw, courses = docs
+    write_csv(courses / "bcs-241-semesters.csv", [{"plan": "241", "programme": "BCS", "page": "3"}])
+    with pytest.raises(SystemExit, match="extract_semesters.py"):
+        ingest.build_chunks(raw, courses)
+
+
 def test_renamed_study_plan_pdf_is_warned_about(docs, capsys):
     raw, courses = docs
     (raw / "bcs-241" / "plan.pdf").rename(raw / "bcs-241" / "plan-v2.pdf")
     ingest.build_chunks(raw, courses)
     assert "plan.pdf not found" in capsys.readouterr().out
+
+
+COURSES = Path(__file__).resolve().parent.parent / "data" / "courses"
+
+
+@pytest.mark.parametrize("folder", sorted(ingest.STUDY_PLANS))
+def test_study_plan_csvs_in_the_repo_load(folder):
+    """The CSVs are checked and edited by hand: a broken row should fail here,
+    not at ingest."""
+    courses = ingest.load_course_csv(folder, COURSES)
+    semesters = ingest.load_semester_csv(folder, COURSES)
+    assert courses and semesters
+    assert {r["year"] for r in semesters if r["year"]} == {"1", "2", "3", "4"}
 
 
 # ------------------------------------------------------- keyword index age --
