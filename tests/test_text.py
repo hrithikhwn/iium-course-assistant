@@ -38,6 +38,19 @@ def test_extract_json(raw, expected):
     assert extract_json(raw) == expected
 
 
+from app.text import json_bool  # noqa: E402
+
+
+@pytest.mark.parametrize("value, default, expected", [
+    (True, False, True), (False, True, False),                       # real JSON booleans
+    ("false", True, False), (" False ", True, False), ("no", True, False),
+    ("true", False, True), ("YES", False, True),                     # quoted by the model
+    (None, True, True), ("maybe", False, False), ("", True, True),   # unreadable: the default
+])
+def test_json_bool(value, default, expected):
+    assert json_bool(value, default) is expected
+
+
 def test_format_context_numbers_and_cites():
     out = format_context([Chunk("rule A", "handbook.pdf", 4), Chunk("rule B", "notes.txt")])
     assert "[1] (handbook.pdf, p.4)" in out

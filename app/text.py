@@ -360,6 +360,16 @@ def extract_json(raw: str) -> dict:
     return {}
 
 
+def json_bool(value: object, default: bool) -> bool:
+    """A true/false field from an LLM's JSON reply. A model can quote it
+    ("false"), and bool("false") is True, so the words are read instead;
+    anything else (null, a missing field, "maybe") is `default`."""
+    if isinstance(value, bool):
+        return value
+    word = value.strip().lower() if isinstance(value, str) else ""
+    return {"true": True, "yes": True, "false": False, "no": False}.get(word, default)
+
+
 def format_context(chunks: list[Chunk]) -> str:
     """Number excerpts so the model can cite them as [1], [2], ..."""
     return "\n\n".join(f"[{i}] ({c.citation()})\n{c.text}" for i, c in enumerate(chunks, 1))

@@ -14,7 +14,7 @@ from .config import settings
 from .llm import LLM
 from .retriever import Retriever
 from .text import (Chunk, batch_of, dedupe, drop_invented_codes, extract_json, fit_context,
-                   format_context, plan_for, renumber_citations, strip_marker)
+                   format_context, json_bool, plan_for, renumber_citations, strip_marker)
 
 ASK_STUDENT = "Which programme are you in (BCS or BIT), and what's your batch (e.g. 241)?"
 
@@ -145,10 +145,12 @@ class CourseAgent:
         # rather than looping forever; the answer step can still say NOT_FOUND.
         if not reply:
             return {"sufficient": True, "reason": "unparseable grade reply, assumed sufficient", "next_query": ""}
+        # json_bool: a quoted "false" must still mean false. `or ""`: a null
+        # field must not become the text "None" (and a search for it).
         return {
-            "sufficient": bool(reply.get("sufficient", True)),
-            "reason": str(reply.get("reason", "")),
-            "next_query": str(reply.get("next_query", "")).strip(),
+            "sufficient": json_bool(reply.get("sufficient"), default=True),
+            "reason": str(reply.get("reason") or ""),
+            "next_query": str(reply.get("next_query") or "").strip(),
         }
 
     def retrieve(self, queries: list[str], plan: str, programme: str) -> list[Chunk]:

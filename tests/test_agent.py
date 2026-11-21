@@ -75,6 +75,26 @@ def test_unparseable_grade_does_not_loop():
     assert len(ret.queries) == 2  # the first search (question + rewrite) only
 
 
+def test_quoted_false_grade_still_retries():
+    """bool("false") is True, so a grader that quoted its answer never retried."""
+    grades = ['{"sufficient": "false", "reason": "missing", "next_query": "course prerequisites policy"}',
+              '{"sufficient": "true", "reason": "found it"}']
+    llm, ret = FakeLLM(grades), FakeRetriever()
+    result = CourseAgent(llm, ret, max_retries=2).run("Can I skip the prereq?", batch=241, programme="BCS")
+    assert ret.queries == ["Can I skip the prereq?", "prerequisite rules", "course prerequisites policy"]
+    grade_steps = [s.detail for s in result.steps if s.name == "grade"]
+    assert grade_steps[0].startswith("sufficient=False") and grade_steps[1].startswith("sufficient=True")
+
+
+def test_null_next_query_is_not_searched():
+    """str(None) is "None", so a null next_query became a search for the word None."""
+    grades = ['{"sufficient": false, "reason": null, "next_query": null}'] * 2
+    llm, ret = FakeLLM(grades), FakeRetriever()
+    result = CourseAgent(llm, ret, max_retries=2).run("anything", batch=241, programme="BCS")
+    assert ret.queries == ["anything", "prerequisite rules"]          # the first search only
+    assert "None" not in next(s.detail for s in result.steps if s.name == "grade")
+
+
 # ------------------------------------------------------------ student info --
 
 @pytest.mark.parametrize("batch, programme", [
