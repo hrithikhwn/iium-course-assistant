@@ -383,9 +383,13 @@ def dedupe(chunks: list[Chunk]) -> list[Chunk]:
 # ------------------------------------------------------------- citations --
 
 # "[2]" or "[2, 5]", with the whitespace before it (removed with an unknown
-# citation). Decimals are matched too: the model sometimes cites a document's
-# own section numbers ("[35.1]" for SAPER rule 35.1) instead of an excerpt number.
-CITATION_RE = re.compile(r"(\s*)\[(\d+(?:\.\d+)*(?:\s*,\s*\d+(?:\.\d+)*)*)\]")
+# citation). A document's own rule numbers are matched too: the model sometimes
+# cites them instead of an excerpt number ("[35.1]" for SAPER rule 35.1,
+# "[38.1.i]" for 38.1(i)), and llama3.1:8b writes both: "[1: 37.1]". A rule
+# number has a dot, so a time like "[10:00]" is left alone.
+RULE = r"\d+(?:\.(?:\d+|[ivxIVX]+))+"
+CITED = rf"(?:{RULE}|\d+(?:\s*:\s*{RULE})?)"
+CITATION_RE = re.compile(rf"(\s*)\[({CITED}(?:\s*,\s*{CITED})*)\]")
 
 
 @dataclass
@@ -403,15 +407,18 @@ def renumber_citations(answer: str, chunks: list[Chunk]) -> Cited:
     two or three, so listing all of them as sources would hide the ones it
     used. A number that isn't an excerpt ([0], one past the end, or a section
     number like [35.1]) is removed from the text instead of pointing at
-    nothing. Only number citations are touched: "[2]", "[2, 5]", "[1][3]"."""
+    nothing, and a section number after an excerpt number is dropped:
+    "[1: 37.1]" is excerpt 1. Only number citations are touched: "[2]",
+    "[2, 5]", "[1][3]"."""
     new_number: dict[int, int] = {}      # number in the context -> number in the answer
     unknown: list[str] = []
 
     def renumber(m: re.Match) -> str:
         kept = set()
         for item in (x.strip() for x in m.group(2).split(",")):
-            if item.isdigit() and 1 <= int(item) <= len(chunks):
-                kept.add(new_number.setdefault(int(item), len(new_number) + 1))
+            number = item.split(":")[0].strip()          # "1: 37.1" -> "1"
+            if number.isdigit() and 1 <= int(number) <= len(chunks):
+                kept.add(new_number.setdefault(int(number), len(new_number) + 1))
             elif item not in unknown:
                 unknown.append(item)
         return f"{m.group(1)}[{', '.join(map(str, sorted(kept)))}]" if kept else ""

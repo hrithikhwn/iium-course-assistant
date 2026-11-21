@@ -332,6 +332,27 @@ def test_section_numbers_are_not_excerpt_numbers():
     assert cited.unknown == ["35.1", "35.2"]
 
 
+def test_excerpt_number_followed_by_a_section_number():
+    """Seen in the baseline eval: llama3.1:8b cited "[1: 37.1]" (excerpt 1 and
+    SAPER rule 37.1), and its correct answers were left with no sources."""
+    chunks = excerpts(3)
+    cited = renumber_citations("Probation is a CGPA from 1.67 to 2.00 [2: 37.1]. "
+                               "The load is then at most 18 credits [2: 37.2].", chunks)
+    assert cited.answer == "Probation is a CGPA from 1.67 to 2.00 [1]. The load is then at most 18 credits [1]."
+    assert cited.sources == [chunks[1]]
+    assert cited.unknown == []
+
+
+def test_section_numbers_with_roman_numerals_are_removed():
+    """Seen in the baseline eval: qwen2.5:3b cited SAPER rule 38.1(i) as "[38.1.i]"."""
+    chunks = excerpts(3)
+    cited = renumber_citations("Dismissed below a CGPA of 1.67 [38.1.i], or after a third probation "
+                               "[38.1.iii] [2].", chunks)
+    assert cited.answer == "Dismissed below a CGPA of 1.67, or after a third probation [1]."
+    assert cited.sources == [chunks[1]]
+    assert cited.unknown == ["38.1.i", "38.1.iii"]
+
+
 def test_repeated_and_adjacent_citations():
     chunks = excerpts(3)
     cited = renumber_citations("A [3][1]. B [3, 3].", chunks)
@@ -339,7 +360,8 @@ def test_repeated_and_adjacent_citations():
     assert cited.sources == [chunks[2], chunks[0]]
 
 
-@pytest.mark.parametrize("answer", ["No citation here.", "Week 2 [of Semester I] or [2026/27].", ""])
+@pytest.mark.parametrize("answer", ["No citation here.", "Week 2 [of Semester I] or [2026/27].",
+                                    "The counter opens at [10:00].", ""])
 def test_text_without_citations_is_unchanged(answer):
     cited = renumber_citations(answer, excerpts(2))
     assert (cited.answer, cited.sources, cited.unknown) == (answer, [], [])
