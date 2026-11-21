@@ -1,8 +1,8 @@
 """Run the eval questions through the agent and score the answers.
 
-    python scripts/run_eval.py                        # every question, model from .env
+    python scripts/run_eval.py                        # every question, model from .env, default settings
     python scripts/run_eval.py --model qwen2.5:3b     # another model at LLM_BASE_URL
-    python scripts/run_eval.py --variant plain        # or no-rewrite, strict (see VARIANTS)
+    python scripts/run_eval.py --variant plain        # or agentic, strict (see VARIANTS)
     python scripts/run_eval.py --ids q02,q11 --repeat 3
     python scripts/run_eval.py --rescore eval/results/<run>.csv   # after editing key facts
 
@@ -48,7 +48,7 @@ from app.text import Chunk  # noqa: E402
 # The agent's switches for each variant, all set here so .env can't change what
 # a variant means (other settings, like TOP_K, still come from .env):
 #   agentic     plan (rewrite), retrieve, grade, retry, answer
-#   no-rewrite  the same, searching with the question only
+#   no-rewrite  the same, searching with the question only: the default settings
 #   plain       plain RAG: one search with the question, then the answer
 #   strict      agentic, but "not found" when the last grade still fails
 VARIANTS = {
@@ -249,7 +249,7 @@ def run(args, questions: list[dict]) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--model", default=settings.llm_model, help="model name at LLM_BASE_URL (default: .env)")
-    parser.add_argument("--variant", choices=VARIANTS, default="agentic")
+    parser.add_argument("--variant", choices=VARIANTS, default="no-rewrite")
     parser.add_argument("--ids", help="only these questions, e.g. q02,q11")
     parser.add_argument("--repeat", type=int, default=1, help="ask each question this many times")
     parser.add_argument("--questions", type=Path, default=ROOT / "eval" / "questions.csv")

@@ -183,8 +183,8 @@ class CourseAgent:
             return self._ask_for_student(str(e), steps, start)
         steps.append(Step("student", f"{programme} {batch} -> plan {plan}"))
 
-        # The plan step: rewrite the question into a keyword query. Switchable because
-        # the question alone found as many answers in testing; the Phase 4 eval decides.
+        # The plan step: rewrite the question into a keyword query. Off by default since
+        # the Phase 4 eval, where the question alone got as many answers right (config.py).
         if self.rewrite:
             query = self.plan(question)
             steps.append(Step("plan", query))

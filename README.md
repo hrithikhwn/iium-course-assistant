@@ -9,7 +9,7 @@ An **agentic RAG** assistant that answers questions about IIUM courses, handbook
 
 Plain RAG retrieves once and hopes for the best. This agent:
 
-1. **Plans** — rewrites the question into a keyword query, searched along with the question itself (`QUERY_REWRITE=false` skips this LLM call)
+1. **Plans** (optional) — rewrites the question into a keyword query, searched along with the question itself. Off by default (`QUERY_REWRITE=true` turns it on): in the eval it got no more answers right and cost an extra LLM call
 2. **Retrieves** — hybrid search (embeddings + BM25 keywords) over the student's own study plan and the university-wide rules
 3. **Grades** — asks the LLM whether the excerpts are actually enough
 4. **Retries** — if not, writes a new query and searches again (bounded loop)
@@ -19,7 +19,7 @@ Plain RAG retrieves once and hopes for the best. This agent:
 
 ```mermaid
 flowchart LR
-    Q[Student question] --> P[Plan: rewrite query]
+    Q[Student question] --> P[Plan: rewrite query<br/>optional, off by default]
     P --> R[Hybrid search<br/>embeddings + BM25<br/>student's plan only]
     R --> G{Grade:<br/>enough context?}
     G -- no, new query --> R
@@ -73,8 +73,9 @@ uvicorn app.main:app --reload    # then POST /ask {"question": "...", "programme
 python scripts/check_retrieval.py
 
 # run the eval: every question through the agent, answers scored on key facts
-# (variants: agentic, no-rewrite, plain = plain RAG, strict)
-python scripts/run_eval.py --model qwen2.5:7b --variant agentic
+# (variants: no-rewrite = the default settings, agentic = with query rewrite,
+#  plain = plain RAG, strict)
+python scripts/run_eval.py --model qwen2.5:7b --variant no-rewrite
 ```
 
 Ollama runs models with a 4096-token context window by default and silently cuts longer prompts, so the agent keeps the excerpts it sends under `MAX_CONTEXT_CHARS` (see `.env.example`).

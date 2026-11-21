@@ -50,15 +50,21 @@ class Settings:
     # hybrid search: this many of the best embedding hits and the best keyword
     # hits always make the top k (0 = plain rank fusion)
     search_guaranteed: int = field(default_factory=lambda: _int("SEARCH_GUARANTEED", 2))
+    # The next three switches are what the Phase 4 baseline eval chose
+    # (eval/results/summary.csv: 70 answers to the answerable questions per run).
+    #
     # plan step: the LLM rewrites the question into a search query, searched along
-    # with the question. Off = search the question only, one LLM call fewer. Both
-    # found the answer for 13/13 eval questions, so the Phase 4 eval decides.
-    query_rewrite: bool = field(default_factory=lambda: _bool("QUERY_REWRITE", True))
+    # with the question. Off by default: with qwen2.5:7b it got no more answers
+    # right (51 of 70 either way) and cost an LLM call (3.9 per question, not 3.0).
+    query_rewrite: bool = field(default_factory=lambda: _bool("QUERY_REWRITE", False))
     # grade step: the LLM checks whether the excerpts answer the question, and the
-    # agent searches again if not. Off = plain RAG: one search, then the answer.
+    # agent searches again if not. Off = plain RAG: one search, then the answer,
+    # which got fewer right with every model (qwen2.5:7b 50 vs 51, llama3.1:8b 47
+    # vs 55, qwen2.5:3b 44 vs 51).
     grading: bool = field(default_factory=lambda: _bool("GRADING", True))
-    # strict: "not found" when the last grade still fails. Off by default because
-    # the grader rejected correct course tables in testing; Phase 4 measures both.
+    # strict: "not found" when the last grade still fails. Off: the grader turns
+    # down excerpts that do answer the question, and strict qwen2.5:7b said "not
+    # found" in 28 of its 70 answers and got 34 right, not 51.
     refuse_on_failed_grade: bool = field(default_factory=lambda: _bool("REFUSE_ON_FAILED_GRADE", False))
     max_retries: int = field(default_factory=lambda: _int("MAX_RETRIES", 2))
     # Most excerpt text sent to the LLM in one prompt. Ollama's default window is
