@@ -21,7 +21,7 @@ import re
 import statistics
 from collections.abc import Iterable
 
-from .text import Chunk, codes_in
+from .text import CITATION_RE, Chunk, codes_in
 
 Facts = list[list[str]]     # one list of alternatives per fact
 
@@ -105,7 +105,9 @@ def score_answer(q: dict, answer: str, found: bool, sources: list[Chunk], contex
         c.source == want_file and (not want_page or c.page == int(want_page)) for c in sources)
     if not facts:
         return {"correct": "", "missing": "", "supported": "", "retrieved": "", "cites_source": cites}
-    missing = missing_facts(answer, facts) if found else [alts[0] for alts in facts]
+    # citation numbers aren't facts: "[4]" mustn't count as the fact "4"
+    text = CITATION_RE.sub(" ", answer)
+    missing = missing_facts(text, facts) if found else [alts[0] for alts in facts]
     return {
         "correct": found and not missing,
         "missing": "; ".join(missing),

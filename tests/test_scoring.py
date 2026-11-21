@@ -87,6 +87,13 @@ def test_refuse_questions_are_right_when_not_found(found, correct):
     assert score_answer({"type": "refuse"}, "x", found, [], [])["correct"] is correct
 
 
+def test_citation_numbers_are_not_facts():
+    """[4] and [5] cite excerpts; they aren't the weeks 4 and 5 the facts ask for."""
+    q = {"type": "dates", "key_facts": "4|fourth; 5|fifth; 13|thirteenth", "source_file": ""}
+    s = score_answer(q, "Classes end in week 13 [4][5].", True, [], [])
+    assert (s["correct"], s["missing"]) == (False, "4; 5")
+
+
 def test_questions_without_facts_are_not_scored():
     q = {"type": "rules", "key_facts": "", "expected_answer": "Twelve semesters.", "source_file": ""}
     assert score_answer(q, "12 semesters", True, [], [])["correct"] == ""
