@@ -366,10 +366,14 @@ def format_context(chunks: list[Chunk]) -> str:
 
 
 def dedupe(chunks: list[Chunk]) -> list[Chunk]:
+    """The chunks in order, each only once. The whole text is compared: a
+    course table split into two chunks repeats its header, and comparing the
+    first 80 characters dropped the second half of a 201 plan's Islamic
+    Fundamental Knowledge table, whose header is that long."""
     seen: set[tuple[str, int | None, str]] = set()
     out: list[Chunk] = []
     for c in chunks:
-        key = (c.source, c.page, c.text[:80])
+        key = (c.source, c.page, c.text)
         if key not in seen:
             seen.add(key)
             out.append(c)

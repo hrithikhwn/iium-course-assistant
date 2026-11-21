@@ -49,6 +49,15 @@ def test_dedupe_keeps_order():
     assert dedupe([a, b, Chunk("x", "f.pdf", 1)]) == [a, b]
 
 
+def test_dedupe_compares_the_whole_text():
+    """A course table split into two chunks repeats its header, and the 201
+    plans' Islamic Fundamental Knowledge header is 80 characters long."""
+    header = "BCS study plan 201, University Required Courses: Islamic Fundamental Knowledge:\n"
+    first = Chunk(header + "- UNGS 1301 Basic Philosophy and Islamic Worldview: 3 credit hours", "plan.pdf", 1)
+    second = Chunk(header + "- CCUB 1062 Usrah 2: 0.5 credit hours", "plan.pdf", 1)
+    assert dedupe([first, second, first]) == [first, second]
+
+
 # ------------------------------------------------------------ batch tags --
 
 from app.text import course_chunks, course_line, folder_tags, plan_filter, plan_for  # noqa: E402
