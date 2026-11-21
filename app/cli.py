@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 
 from .agent import CourseAgent
 from .llm import OpenAICompatibleLLM
@@ -18,6 +19,9 @@ def main() -> None:
     parser.add_argument("--batch", help="your batch, e.g. 241 (or your matric number)")
     parser.add_argument("--trace", action="store_true", help="show the agent's steps")
     args = parser.parse_args()
+    # Windows writes piped or redirected output in its ANSI code page (cp1252),
+    # which has no "≤" (SAPER writes "1.67 ≤ CGPA"), and printing it crashed
+    sys.stdout.reconfigure(encoding="utf-8")
 
     agent = CourseAgent(OpenAICompatibleLLM(), ChromaRetriever())
     result = agent.run(" ".join(args.question), batch=args.batch, programme=args.programme)
