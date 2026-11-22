@@ -19,4 +19,5 @@ os.environ.update({
     "MAX_RETRIES": "2",
     "SEARCH_GUARANTEED": "2",
     "MAX_CONTEXT_CHARS": "11000",
+    "LLM_EXTRA_BODY": "",
 })

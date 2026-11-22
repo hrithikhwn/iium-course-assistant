@@ -39,7 +39,7 @@ flowchart LR
     L -.-> P & G & A
 ```
 
-The LLM sits behind one small class (`app/llm.py`) that talks to **any OpenAI-compatible endpoint**, so switching from a local Qwen to Llama or a hosted model is a one-line `.env` change.
+The LLM sits behind one small class (`app/llm.py`) that talks to **any OpenAI-compatible endpoint**, so switching from a local Qwen to Llama or a hosted model is a `.env` change, with no code to edit (`.env.example` shows DeepSeek as an example).
 
 ## Quickstart
 

@@ -1,6 +1,7 @@
 """Settings loaded from environment variables / .env."""
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,6 +23,20 @@ def _bool(name: str, default: bool) -> bool:
     return raw in {"1", "true", "yes", "on"} if raw else default
 
 
+def _json_object(name: str) -> dict:
+    """A JSON object from the environment; {} when unset or empty."""
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"{name} is not valid JSON ({e}): {raw}") from None
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be a JSON object, like {{\"key\": \"value\"}}, not: {raw}")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     # LLM — any OpenAI-compatible endpoint (Ollama exposes one at /v1)
@@ -29,6 +44,9 @@ class Settings:
     llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", "qwen2.5:7b"))
     llm_api_key: str = field(default_factory=lambda: os.getenv("LLM_API_KEY", "ollama"))
     llm_timeout: int = field(default_factory=lambda: _int("LLM_TIMEOUT", 120))
+    # Provider options added to every LLM request, as a JSON object. DeepSeek,
+    # for one, thinks before it answers unless sent {"thinking": {"type": "disabled"}}
+    llm_extra_body: dict = field(default_factory=lambda: _json_object("LLM_EXTRA_BODY"))
 
     # Embeddings — Ollama native API
     ollama_url: str = field(default_factory=lambda: os.getenv("OLLAMA_URL", "http://localhost:11434"))
