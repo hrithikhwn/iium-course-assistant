@@ -121,6 +121,19 @@ def test_plan_filter_includes_all_documents():
     ]}
 
 
+@pytest.mark.parametrize("text, names", [
+    ("Batch 201: At least 130 — published as 132", True),            # the registration FAQ
+    ("for study plan Batch 241 onwards, BCS & BIT splits it", True),
+    ("batches 201–231 follow the 201 plan", True),
+    ("BCS study plan 241, Core Computing Courses:", False),           # a course table header
+    ("The maximum load shall be twenty (20) credit hours.", False),
+    ("Semester I 2026/2027, batch 2026", False),                      # a year, not a batch
+])
+def test_names_a_batch(text, names):
+    from app.text import names_a_batch
+    assert names_a_batch([Chunk("Other text.", "a.pdf", 1), Chunk(text, "b.pdf", 2)]) is names
+
+
 # --------------------------------------------------------- course tables --
 
 def row(code, name, page="1", category="Core Computing Courses", prereq="", dept="DCS"):

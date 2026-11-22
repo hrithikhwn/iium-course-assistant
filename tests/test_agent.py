@@ -1,8 +1,8 @@
 """Agent loop tests with a fake LLM and retriever — no Ollama needed."""
 import pytest
 
-from app.agent import (ANSWER_SYSTEM, ASK_STUDENT, GRADE_SYSTEM, NOT_FOUND, NOT_FOUND_MESSAGE,
-                       PLAN_SYSTEM, CourseAgent)
+from app.agent import (ANSWER_SYSTEM, ANSWER_SYSTEM_WITH_PLAN, ASK_STUDENT, GRADE_SYSTEM, NOT_FOUND,
+                       NOT_FOUND_MESSAGE, PLAN_RULE, PLAN_SYSTEM, CourseAgent)
 from app.text import Chunk
 
 
@@ -20,7 +20,7 @@ class FakeLLM:
             return '{"query": "prerequisite rules"}'
         if system == GRADE_SYSTEM:
             return self.grades.pop(0)
-        if system == ANSWER_SYSTEM:
+        if system in (ANSWER_SYSTEM, ANSWER_SYSTEM_WITH_PLAN):
             return self.reply
         raise AssertionError("unexpected prompt")
 
@@ -228,16 +228,43 @@ def test_question_comes_after_the_excerpts():
     assert msg.endswith("\n\nQuestion: When is FYP?")
 
 
-def test_answer_step_is_told_the_students_study_plan():
+class FaqRetriever(FakeRetriever):
+    """Every search finds the registration FAQ's rule per batch."""
+    def search(self, query, k=5, plan=None, programme=None):
+        super().search(query, k, plan, programme)
+        return [Chunk("Batch 201: At least 130 credit hours. Batch 241 and onwards: at least 125.", "faq.pdf", 5)]
+
+
+def test_answer_step_is_told_the_study_plan_when_an_excerpt_names_a_batch():
     """Some rules are given per study plan ("Batch 201: at least 130 ... Batch
     241 and onwards: at least 125"). Not told that batch 211 follows the 201
     plan, every model gave a batch 211 student the 241 rule (eval q24)."""
     llm = FakeLLM(['{"sufficient": true, "reason": "ok"}'])
-    CourseAgent(llm, FakeRetriever()).run("How many credits to graduate?", batch="2110123", programme="bcs")
-    answer_msg = llm.users[llm.calls.index(ANSWER_SYSTEM)]
+    result = CourseAgent(llm, FaqRetriever()).run("How many credits to graduate?", batch="2110123", programme="bcs")
+    answer_msg = llm.users[llm.calls.index(ANSWER_SYSTEM_WITH_PLAN)]
     assert answer_msg.endswith("\n\nStudent: BCS batch 211, study plan Batch 201\n"
                                "Question: How many credits to graduate?")
     assert "Student:" not in llm.users[llm.calls.index(GRADE_SYSTEM)]    # the grade judges the excerpts only
+    assert "told the study plan" in result.steps[-1].detail
+
+
+def test_study_plan_is_left_out_when_no_excerpt_names_a_batch():
+    """Told it for every question, qwen2.5:7b answered "the most credit hours in
+    a regular semester" with "18, as per your study plan Batch 241", the FAQ's
+    usual load, instead of SAPER's maximum of 20 (eval q01)."""
+    llm = FakeLLM(['{"sufficient": true, "reason": "ok"}'])
+    result = CourseAgent(llm, FakeRetriever()).run("What is the maximum credit load?", batch=241, programme="BCS")
+    assert llm.calls[-1] == ANSWER_SYSTEM                         # without PLAN_RULE
+    assert "Student:" not in llm.users[-1]
+    assert "told the study plan" not in result.steps[-1].detail
+
+
+def test_plan_rule_sits_just_before_the_not_found_rule():
+    """ANSWER_SYSTEM_WITH_PLAN is ANSWER_SYSTEM with PLAN_RULE added as its
+    second-to-last line, as it was when the eval measured the study plan line."""
+    lines = ANSWER_SYSTEM_WITH_PLAN.splitlines()
+    assert lines[-2] == PLAN_RULE and lines[-1].startswith("- If none of the excerpts answer")
+    assert ANSWER_SYSTEM_WITH_PLAN.replace(PLAN_RULE + "\n", "") == ANSWER_SYSTEM
 
 
 def test_rewrite_adds_to_the_questions_results_without_removing_any():

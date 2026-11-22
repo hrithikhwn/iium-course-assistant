@@ -14,7 +14,7 @@ from .config import settings
 from .llm import LLM
 from .retriever import Retriever
 from .text import (Chunk, batch_of, dedupe, drop_invented_codes, extract_json, fit_context,
-                   format_context, json_bool, plan_for, renumber_citations, strip_marker)
+                   format_context, json_bool, names_a_batch, plan_for, renumber_citations, strip_marker)
 
 ASK_STUDENT = "Which programme are you in (BCS or BIT), and what's your batch (e.g. 241)?"
 
@@ -70,13 +70,23 @@ NOT_FOUND = "NOT_FOUND"   # what the answer model replies when the excerpts don'
 # its first batch ("Batch 201: at least 130 ... Batch 241 and onwards: at least
 # 125"). Asked by a batch 211 student, every model and variant in the first eval
 # gave the batch 241 rule (q24), as nothing said that 211 follows the 201 plan.
-# The agent already knows (plan_for), so the answer step is now told.
+# The agent already knows (plan_for), so the answer step is told, and PLAN_RULE
+# is added to its instructions; but only when an excerpt names a batch. Told it
+# for every question, qwen2.5:7b answered q01 (the most credit hours in a
+# regular semester) with "18, as per your study plan Batch 241", the FAQ's usual
+# load, instead of SAPER's maximum of 20: right 0 times in 4, against 4 in 4
+# without the line. On all 40 questions (qwen2.5:7b, 2 answers each) the line
+# always got 59 of 70 right and never 60; with this check, q01 (0/2 always, 2/2
+# never) and q25 (2/2 always, 0/2 never) both come out right.
 ANSWER_SYSTEM = f"""You are an assistant for IIUM students. Answer the question ONLY from the numbered excerpts.
 - Write the answer in your own words in 1-3 sentences. Do not copy whole excerpts.
 - After each fact, put the number of its excerpt in brackets, like [2]: the number shown before the excerpt, never a section or page number from its text.
 - Course tables list each course as "- CODE Name: credit hours; prerequisite: ...". If the question is about a course, use its line.
-- The student's batch and study plan are given before the question. Where the excerpts give different rules for different batches or study plans, use the one for the student's study plan.
 - If none of the excerpts answer the question, reply with exactly {NOT_FOUND} and nothing else. Do not guess."""
+PLAN_RULE = ("- The student's batch and study plan are given before the question. Where the excerpts give "
+             "different rules for different batches or study plans, use the one for the student's study plan.")
+# the same instructions with PLAN_RULE just before the NOT_FOUND line
+ANSWER_SYSTEM_WITH_PLAN = ANSWER_SYSTEM.replace("\n- If none", f"\n{PLAN_RULE}\n- If none")
 
 
 def excerpts_then_question(question: str, chunks: list[Chunk], student: str = "") -> str:
@@ -166,8 +176,10 @@ class CourseAgent:
         return dedupe(found)
 
     def answer(self, question: str, chunks: list[Chunk], student: str = "") -> str:
+        """`student` is the student's study plan, or "" to leave it out."""
+        system = ANSWER_SYSTEM_WITH_PLAN if student else ANSWER_SYSTEM
         user = excerpts_then_question(question, chunks, student)
-        return self.llm.chat(ANSWER_SYSTEM, user, temperature=0.2)
+        return self.llm.chat(system, user, temperature=0.2)
 
     def run(self, question: str, batch: int | str | None = None, programme: str | None = None) -> Result:
         start = time.perf_counter()
@@ -227,8 +239,10 @@ class CourseAgent:
         if self.refuse_on_failed_grade and verdict and not verdict["sufficient"]:
             steps.append(Step("answer", "last grade not sufficient -> not found (strict)"))
             return self._not_found(steps, start, context)
-        # in the documents' own words: "study plan Batch 201", not "plan 201"
-        reply = self.answer(question, context, f"{programme} batch {batch_of(batch)}, study plan Batch {plan}")
+        # The study plan, in the documents' own words ("study plan Batch 201", not
+        # "plan 201"), only when an excerpt names a batch: see PLAN_RULE.
+        student = f"{programme} batch {batch_of(batch)}, study plan Batch {plan}" if names_a_batch(context) else ""
+        reply = self.answer(question, context, student)
         # "" when the model says the excerpts don't answer it (or wrote nothing);
         # a NOT_FOUND it added after a real answer is cut off here
         text = strip_marker(reply, NOT_FOUND)
@@ -242,6 +256,7 @@ class CourseAgent:
         # them from a correct answer); the trace says so and the eval counts it.
         cited = renumber_citations(text, context)
         detail = f"{len(context)} excerpts in context; "
+        detail += "told the study plan; " if student else ""
         detail += f"cited excerpts {cited.numbers}" if cited.sources else "no citations"
         if cited.unknown:                                 # numbers that weren't excerpts: [9], [35.1]
             detail += f"; removed unknown citations [{', '.join(cited.unknown)}]"

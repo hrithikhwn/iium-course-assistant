@@ -77,6 +77,19 @@ def plan_filter(plan: str, programme: str) -> dict:
     ]}
 
 
+# "Batch 201: At least 130 ...", "for study plan Batch 241 onwards": a rule given
+# per batch. Of the documents, only the registration FAQ writes them.
+BATCH_RE = re.compile(r"\bbatch(?:es)?\s+\d{3}\b", re.I)
+
+
+def names_a_batch(chunks: list[Chunk]) -> bool:
+    """Whether any excerpt names a batch ("Batch 201: At least 130 credit
+    hours ..."), so that the answer may depend on the student's study plan.
+    Course table headers ("BCS study plan 241, ...") don't count: search only
+    returns the student's own plan's tables, so there is nothing to choose."""
+    return any(BATCH_RE.search(c.text) for c in chunks)
+
+
 # ---------------------------------------------------------- keyword search --
 
 # Short words that sit before a 4-digit number without being a course prefix:
