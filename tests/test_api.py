@@ -1,4 +1,7 @@
 """API tests with a fake agent — no Ollama or Chroma needed."""
+from dataclasses import replace
+
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -33,7 +36,23 @@ def test_ask_passes_programme_and_batch_to_the_agent(client):
     body = http.post("/ask", json={"question": "When can I take FYP?", "programme": "BCS", "batch": 241}).json()
     assert agent.calls == [("When can I take FYP?", 241, "BCS")]
     assert body["answer"].endswith("[1].") and body["found"] and not body["needs_student_info"]
-    assert body["sources"] == [{"ref": 1, "citation": "plan.pdf, p.1", "excerpt": "FYP text"}]
+    assert body["sources"] == [{"ref": 1, "citation": "plan.pdf, p.1", "source": "plan.pdf", "page": 1,
+                                "excerpt": "FYP text"}]
+
+
+def test_a_source_without_pages_has_no_page(monkeypatch):
+    agent = FakeAgent(Result("Yes [1].", [Chunk("notes", "notes.txt")]))
+    monkeypatch.setattr(main, "get_agent", lambda: agent)
+    body = TestClient(main.app).post("/ask", json={"question": "anything", "programme": "BCS", "batch": 241}).json()
+    source = body["sources"][0]
+    assert (source["citation"], source["source"], source["page"]) == ("notes.txt", "notes.txt", None)
+
+
+def test_sources_keep_the_whole_excerpt(monkeypatch):
+    excerpt = "FAQ intro. " * 30 + "FYP I needs at least 90 credit hours."   # the fact is past character 300
+    monkeypatch.setattr(main, "get_agent", lambda: FakeAgent(Result("90 [1].", [Chunk(excerpt, "faq.pdf", 7)])))
+    body = TestClient(main.app).post("/ask", json={"question": "anything", "programme": "BCS", "batch": 241}).json()
+    assert body["sources"][0]["excerpt"] == excerpt
 
 
 def test_ask_without_student_info_says_so(client):
@@ -52,3 +71,47 @@ def test_empty_vector_store_is_503(monkeypatch):
     monkeypatch.setattr(main, "get_agent", lambda: FakeAgent(error=RuntimeError("Vector store is empty")))
     resp = TestClient(main.app).post("/ask", json={"question": "anything", "programme": "BCS", "batch": 241})
     assert resp.status_code == 503
+
+
+@pytest.mark.parametrize("error, why", [
+    (httpx.ConnectError("All connection attempts failed"), "ConnectError: All connection attempts failed"),
+    (httpx.ReadTimeout(""), "(ReadTimeout)"),
+])
+def test_model_server_down_is_503_with_the_reason(monkeypatch, error, why):
+    monkeypatch.setattr(main, "get_agent", lambda: FakeAgent(error=error))
+    resp = TestClient(main.app).post("/ask", json={"question": "anything", "programme": "BCS", "batch": 241})
+    assert resp.status_code == 503
+    assert why in resp.json()["detail"] and "Ollama" in resp.json()["detail"]
+
+
+@pytest.fixture
+def raw_dir(tmp_path, monkeypatch):
+    """A data/raw with two documents and a file ingest doesn't read, next to
+    a file outside it that must never be served."""
+    raw = tmp_path / "raw"
+    (raw / "all").mkdir(parents=True)
+    (raw / "bcs-201").mkdir()
+    (raw / "all" / "SAPER.pdf").write_bytes(b"%PDF-1.4 saper")
+    (raw / "bcs-201" / "STUDY PLAN FOR BCS BATCH 201.pdf").write_bytes(b"%PDF-1.4 plan")
+    (raw / "all" / "notes.docx").write_bytes(b"not a type ingest reads")
+    (tmp_path / "secret.txt").write_text("outside data/raw")
+    monkeypatch.setattr(main, "settings", replace(main.settings, raw_dir=raw))
+    return raw
+
+
+def test_a_cited_document_opens_in_the_browser(raw_dir):
+    resp = TestClient(main.app).get("/documents/SAPER.pdf")
+    assert resp.status_code == 200 and resp.content == b"%PDF-1.4 saper"
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.headers["content-disposition"].startswith("inline;")
+
+
+def test_document_names_may_have_spaces(raw_dir):
+    resp = TestClient(main.app).get("/documents/STUDY%20PLAN%20FOR%20BCS%20BATCH%20201.pdf")
+    assert resp.status_code == 200 and resp.content == b"%PDF-1.4 plan"
+
+
+@pytest.mark.parametrize("name", ["nope.pdf", "notes.docx", "secret.txt", "..%2Fsecret.txt",
+                                  "..%2F..%2Fsecret.txt", "all%2FSAPER.pdf"])
+def test_only_documents_in_raw_dir_are_served(raw_dir, name):
+    assert TestClient(main.app).get(f"/documents/{name}").status_code == 404
