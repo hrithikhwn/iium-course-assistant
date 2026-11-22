@@ -5,6 +5,18 @@ An **agentic RAG** assistant that answers questions about IIUM courses, handbook
 > "Can I take INFO 4303 without the prerequisite?"
 > → searches the handbook, checks whether what it found actually answers the question, searches again if not, then answers and cites `[1] student-handbook.pdf, p.42`.
 
+## Web UI
+
+A chat page (React, TypeScript, Vite) on top of the FastAPI server:
+
+- **Asks who you are first.** The rules depend on your study plan, so before it searches, the assistant asks for your programme (BCS or BIT) and batch. A matric number works too, and only its batch is sent (2410123 → 241)
+- **Citations you can check.** Each `[n]` in an answer links to its source, and each source opens the PDF at the cited page
+- **Says when it doesn't know.** If the documents don't answer the question, it says so instead of guessing
+- **Shows its work.** "How it found this" lists the agent's steps: each search, grade and retry
+- **Counts while it searches.** An answer takes about 16 s on qwen2.5:7b on a laptop, so the page shows the seconds as they pass
+
+Each question is answered on its own: the chat remembers your programme and batch, not your earlier questions. To run it, see [Quickstart](#quickstart).
+
 ## Why agentic (not plain RAG)?
 
 Plain RAG retrieves once and hopes for the best. This agent:
@@ -21,7 +33,7 @@ In the eval, the grade-and-retry loop pays off for the small local models it was
 
 ```mermaid
 flowchart LR
-    Q[Student question] --> P[Plan: rewrite query<br/>optional, off by default]
+    Q[Student question<br/>chat page or CLI] --> P[Plan: rewrite query<br/>optional, off by default]
     P --> R[Hybrid search<br/>embeddings + BM25<br/>student's plan only]
     R --> G{Grade:<br/>enough context?}
     G -- no, new query --> R
@@ -70,7 +82,7 @@ The eval asks 40 questions written from the official documents (`eval/questions.
 
 ## Quickstart
 
-**Requirements:** Python 3.10+, [Ollama](https://ollama.com)
+**Requirements:** Python 3.10+, [Ollama](https://ollama.com), and [Node.js](https://nodejs.org) 24 for the web UI
 
 ```bash
 # 1. Pull the models (~5 GB total, runs on an 8 GB laptop)
@@ -90,11 +102,13 @@ cp .env.example .env
 #    data/courses/*.csv.
 python -m app.ingest
 
-# 4. Ask (programme and batch pick the right study plan)
+# 4. Ask from the terminal (programme and batch pick the right study plan)
 python -m app.cli "What is the minimum CGPA to avoid probation?" --programme BCS --batch 241 --trace
 
-# or run the API
-uvicorn app.main:app --reload    # then POST /ask {"question": "...", "programme": "BCS", "batch": 241}
+# 5. Or in the browser: start the API, then the chat page in a second terminal,
+#    and open http://localhost:5173
+python -m uvicorn app.main:app --reload    # the API alone: POST /ask {"question": "...", "programme": "BCS", "batch": 241}
+cd frontend && npm ci && npm run dev
 
 # check retrieval against the eval questions
 python scripts/check_retrieval.py
@@ -120,13 +134,18 @@ app/
   agent.py       plan → retrieve → grade → retry → answer loop
   scoring.py     eval scoring: key facts in answers, citations and context (pure, unit-tested)
   cli.py         command-line interface
-  main.py        FastAPI server
+  main.py        FastAPI server: /ask, /health, and /documents for the cited PDFs
+frontend/        the chat page: React + TypeScript (Vite), with its own tests (Vitest, run in CI)
+  src/App.tsx        the conversation: questions, programme and batch, New chat
+  src/Reply.tsx      a reply: waiting, the agent's question, or the answer with its sources and steps
+  src/citations.ts   [n] in an answer → links to its sources (pure, unit-tested)
+  src/api.ts         typed client for the API
 scripts/
   extract_tables.py     study plan course tables → data/courses/<plan>.csv
   extract_semesters.py  study plan semester pages → data/courses/<plan>-semesters.csv
   check_retrieval.py    how often search finds the answer to each eval question
   run_eval.py           eval questions through the agent, scored; one CSV per run
-tests/           unit tests (run in CI)
+tests/           Python unit tests (run in CI)
 eval/            evaluation questions with expected answers, key facts and sources;
                  results/ holds each run's scores and a summary
 data/courses/    study plan course tables and semester plans, extracted and hand-checked
@@ -139,7 +158,7 @@ data/raw/        your documents (git-ignored)
 - [x] **Model comparison** — the same eval across qwen2.5:3b / 7b, llama3.1:8b and DeepSeek's hosted `deepseek-flash`
 - [x] **Hybrid search** — BM25 keyword search alongside embeddings, for course names and codes like `BIIT 4321`
 - [ ] **Bahasa Melayu** support
-- [ ] **Web UI** (Streamlit or a simple React page)
+- [x] **Web UI** — a chat page in React and TypeScript, whose citations open the PDF at the cited page (see [Web UI](#web-ui))
 - [ ] Docker compose for one-command setup
 
 ## A note on documents
