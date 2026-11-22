@@ -5,3 +5,7 @@ import { afterEach } from 'vitest'
 
 // Remove what each test rendered, so the next test starts from an empty page.
 afterEach(() => cleanup())
+
+// jsdom doesn't lay pages out, so it can't scroll (it would log "Not
+// implemented"): the page's scroll to the newest message does nothing in tests.
+window.scrollTo = () => {}
