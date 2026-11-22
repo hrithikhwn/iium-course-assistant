@@ -94,7 +94,7 @@ ollama pull qwen2.5:7b          # or qwen2.5:3b on weaker machines
 ollama pull nomic-embed-text
 
 # 2. Install
-git clone https://github.com/<your-username>/iium-course-assistant.git
+git clone https://github.com/hrithikhwn/iium-course-assistant.git
 cd iium-course-assistant
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
