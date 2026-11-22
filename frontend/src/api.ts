@@ -68,7 +68,7 @@ export function documentUrl(source: string, page: number | null): string {
   return page ? `${url}#page=${page}` : url
 }
 
-export const NOT_RUNNING = "Can't reach the API. Start it with: uvicorn app.main:app --reload"
+export const NOT_RUNNING = "Can't reach the API. Start it with: python -m uvicorn app.main:app --reload"
 
 async function request<T>(path: string, init: RequestInit): Promise<T> {
   let resp: Response

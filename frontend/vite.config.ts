@@ -2,8 +2,9 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// The FastAPI server: uvicorn app.main:app --reload. 127.0.0.1 rather than
-// localhost, which can resolve to IPv6 (::1), where uvicorn doesn't listen.
+// The FastAPI server: python -m uvicorn app.main:app --reload. 127.0.0.1
+// rather than localhost, which can resolve to IPv6 (::1), where uvicorn
+// doesn't listen.
 const api = 'http://127.0.0.1:8000'
 
 // https://vite.dev/config/
