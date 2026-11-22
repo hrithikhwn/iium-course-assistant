@@ -7,6 +7,10 @@ An **agentic RAG** assistant that answers questions about IIUM courses, handbook
 
 ## Web UI
 
+![The chat page asks for the student's programme and batch, answers with citations that open the PDF at the cited page, and says when the documents don't have the answer](docs/demo.gif)
+
+*Sped up. Recorded on qwen2.5:7b on a laptop; each answer shows how long it really took.*
+
 A chat page (React, TypeScript, Vite) on top of the FastAPI server:
 
 - **Asks who you are first.** The rules depend on your study plan, so before it searches, the assistant asks for your programme (BCS or BIT) and batch. A matric number works too, and only its batch is sent (2410123 → 241)
