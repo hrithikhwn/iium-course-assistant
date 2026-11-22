@@ -14,3 +14,5 @@
 2026-11-22_0445_llama3.1-8b_plain,a8e1bef,llama3.1:8b,plain,2,80,0,70,64,0,68,70,10,6,7.5,1
 2026-11-22_0456_qwen2.5-3b_no-rewrite,a8e1bef,qwen2.5:3b,no-rewrite,2,80,0,70,56,2,36,70,10,10,11.6,3.2
 2026-11-22_0512_qwen2.5-3b_plain,a8e1bef,qwen2.5:3b,plain,2,80,0,70,55,2,39,70,10,10,3.2,1
+2026-11-22_1307_deepseek-flash_no-rewrite,3448601,deepseek-flash,no-rewrite,2,80,0,70,67,0,70,70,10,10,1.8,2.3
+2026-11-22_1310_deepseek-flash_plain,3448601,deepseek-flash,plain,2,80,0,70,67,1,69,70,10,10,0.9,1
