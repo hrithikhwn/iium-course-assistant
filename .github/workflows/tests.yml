@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# the jobs only read the code, so the workflow's token can't change anything
+permissions:
+  contents: read
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
