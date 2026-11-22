@@ -68,21 +68,24 @@ class Settings:
     # hybrid search: this many of the best embedding hits and the best keyword
     # hits always make the top k (0 = plain rank fusion)
     search_guaranteed: int = field(default_factory=lambda: _int("SEARCH_GUARANTEED", 2))
-    # The next three switches are what the Phase 4 baseline eval chose
-    # (eval/results/summary.csv: 70 answers to the answerable questions per run).
+    # The next three switches are what the Phase 4 eval chose (every run is in
+    # eval/results/summary.csv, with 70 answers to the answerable questions each).
     #
     # plan step: the LLM rewrites the question into a search query, searched along
-    # with the question. Off by default: with qwen2.5:7b it got no more answers
-    # right (51 of 70 either way) and cost an LLM call (3.9 per question, not 3.0).
+    # with the question. Off by default: in the final eval, qwen2.5:7b got fewer
+    # answers right with it (58 of 70, not 62) and made an extra LLM call (3.7 per
+    # question, not 2.6). In the baseline it got 51 either way.
     query_rewrite: bool = field(default_factory=lambda: _bool("QUERY_REWRITE", False))
     # grade step: the LLM checks whether the excerpts answer the question, and the
-    # agent searches again if not. Off = plain RAG: one search, then the answer,
-    # which got fewer right with every model (qwen2.5:7b 50 vs 51, llama3.1:8b 47
-    # vs 55, qwen2.5:3b 44 vs 51).
+    # agent searches again if not. Off = plain RAG: one search, then the answer.
+    # On by default for the small local models: in the final eval it got more right
+    # with qwen2.5:7b (62 vs 58) and qwen2.5:3b (56 vs 55), and the same with
+    # deepseek-flash (67). llama3.1:8b got fewer right with it (61 vs 64) but
+    # refused better: without it, it answered 4 of the 10 times it should refuse.
     grading: bool = field(default_factory=lambda: _bool("GRADING", True))
     # strict: "not found" when the last grade still fails. Off: the grader turns
-    # down excerpts that do answer the question, and strict qwen2.5:7b said "not
-    # found" in 28 of its 70 answers and got 34 right, not 51.
+    # down excerpts that do answer the question, and in the baseline eval strict
+    # qwen2.5:7b said "not found" in 28 of its 70 answers and got 34 right, not 51.
     refuse_on_failed_grade: bool = field(default_factory=lambda: _bool("REFUSE_ON_FAILED_GRADE", False))
     max_retries: int = field(default_factory=lambda: _int("MAX_RETRIES", 2))
     # Most excerpt text sent to the LLM in one prompt. Ollama's default window is
