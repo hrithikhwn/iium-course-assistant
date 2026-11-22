@@ -1,9 +1,11 @@
 # IIUM Course Assistant
 
-An **agentic RAG** assistant that answers questions about IIUM courses, handbooks and academic rules — with page-level citations — running on a **small local LLM** (via Ollama) so student data never leaves your machine.
+An **agentic RAG** assistant that answers KICT students' questions about their study plans, course registration and IIUM's academic rules — with page-level citations — running on a **small local LLM** (via Ollama) so student data never leaves your machine.
 
-> "Can I take INFO 4303 without the prerequisite?"
-> → searches the handbook, checks whether what it found actually answers the question, searches again if not, then answers and cites `[1] student-handbook.pdf, p.42`.
+**Version 1 is for KICT only:** its two programmes, Computer Science (BCS) and Information Technology (BIT), from batch 201 on, with the IIUM-wide rules (SAPER) and the 2026/27 academic calendar they follow. Other kulliyyahs are on the [roadmap](#roadmap).
+
+> "BCS batch 241: how many credits is the Final Year Project, and when can I register for FYP I?"
+> → searches the BCS 241 study plan and KICT's registration FAQ, checks whether what it found actually answers the question, searches again if not, then answers: 7 credit hours (FYP I 3, FYP II 4), and FYP I after 90 credit hours with a proposal approved by a supervisor, citing `KICT-Course-Registration-FAQ-BCS-BIT.pdf, p.7` and `BCS Study Plan (Batch 241) Rev_3.pdf, p.1`.
 
 ## Web UI
 
@@ -161,6 +163,7 @@ data/raw/        your documents (git-ignored)
 - [x] **Evaluation set** — 40 real questions with expected answers and key facts, scoring accuracy, citations and search (see [Results](#results))
 - [x] **Model comparison** — the same eval across qwen2.5:3b / 7b, llama3.1:8b and DeepSeek's hosted `deepseek-flash`
 - [x] **Hybrid search** — BM25 keyword search alongside embeddings, for course names and codes like `BIIT 4321`
+- [ ] **Other kulliyyahs** — version 1 covers KICT's BCS and BIT; each kulliyyah would need its own study plans, folder tags and eval questions
 - [ ] **Bahasa Melayu** support
 - [x] **Web UI** — a chat page in React and TypeScript, whose citations open the PDF at the cited page (see [Web UI](#web-ui))
 - [ ] Docker compose for one-command setup
